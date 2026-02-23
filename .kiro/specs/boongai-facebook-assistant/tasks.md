@@ -39,7 +39,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 2: Configuration persistence round-trip**
     - **Validates: Requirements 1.4, 2.4, 14.2, 14.3**
   
-  - [~] 2.5 Write property test for API key encryption
+  - [x] 2.5 Write property test for API key encryption
     - **Property 36: API key encryption before storage**
     - **Validates: Requirements 14.4**
   
