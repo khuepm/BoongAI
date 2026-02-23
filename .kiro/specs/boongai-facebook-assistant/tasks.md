@@ -35,7 +35,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Handle corrupted configuration detection and recovery
     - _Requirements: 1.4, 2.4, 14.2, 14.3, 14.5_
   
-  - [~] 2.4 Write property test for configuration persistence
+  - [x] 2.4 Write property test for configuration persistence
     - **Property 2: Configuration persistence round-trip**
     - **Validates: Requirements 1.4, 2.4, 14.2, 14.3**
   

@@ -78,6 +78,13 @@ describe('ConfigurationManager', () => {
     };
 
     test('Feature: boongai-facebook-assistant, Property 2: Configuration persistence round-trip', async () => {
+      /**
+       * Validates: Requirements 1.4, 2.4, 14.2, 14.3
+       * 
+       * Property: For any valid extension configuration (including master switch state, 
+       * AI provider, model, and API key), saving the configuration and then loading it 
+       * should produce an equivalent configuration.
+       */
       await fc.assert(
         fc.asyncProperty(
           fc.record({
@@ -99,8 +106,12 @@ describe('ConfigurationManager', () => {
               callback(savedData);
             });
 
+            // Encrypt API key before saving (as per requirement 14.4)
+            const encryptedApiKey = await ConfigurationManager.encryptApiKey(config.apiKey);
+            const configToSave = { ...config, apiKey: encryptedApiKey };
+
             // Save configuration (without waiting for debounce in test)
-            await ConfigurationManager.saveConfig(config);
+            await ConfigurationManager.saveConfig(configToSave);
             
             // Manually trigger the callback immediately for testing
             const setCall = (chrome.storage.local.set as jest.Mock).mock.calls[(chrome.storage.local.set as jest.Mock).mock.calls.length - 1];
@@ -111,10 +122,17 @@ describe('ConfigurationManager', () => {
             // Load configuration
             const loadedConfig = await ConfigurationManager.loadConfig();
 
-            // Verify equivalence
+            // Verify equivalence of all fields
+            expect(loadedConfig.version).toBe(config.version);
             expect(loadedConfig.masterSwitch).toBe(config.masterSwitch);
             expect(loadedConfig.aiProvider).toBe(config.aiProvider);
             expect(loadedConfig.model).toBe(config.model);
+            expect(loadedConfig.lastValidated).toBe(config.lastValidated);
+            
+            // API key should be encrypted in storage but decrypt to same value
+            expect(loadedConfig.apiKey).toBe(encryptedApiKey);
+            const decryptedKey = await ConfigurationManager.decryptApiKey(loadedConfig.apiKey);
+            expect(decryptedKey).toBe(config.apiKey);
           }
         ),
         { ...propertyTestConfig, numRuns: 20 } // Reduce runs for this test
