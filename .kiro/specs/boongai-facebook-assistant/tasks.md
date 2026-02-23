@@ -43,7 +43,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 36: API key encryption before storage**
     - **Validates: Requirements 14.4**
   
-  - [~] 2.6 Write property test for corrupted config recovery
+  - [x] 2.6 Write property test for corrupted config recovery
     - **Property 37: Corrupted config recovery**
     - **Validates: Requirements 14.5**
 
