@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "BoongAI",
+  "version": "1.0.0",
+  "description": "AI Assistant for Facebook Comments",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.facebook.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab"
+  ]
+}
