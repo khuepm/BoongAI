@@ -3,26 +3,21 @@ import { ConfigurationManager } from '../configurationManager';
 import { ExtensionConfig, DEFAULT_CONFIG } from '@/types';
 import fc from 'fast-check';
 
-// Mock Chrome Storage API
-const mockStorage = {
-  local: {
-    get: jest.fn(),
-    set: jest.fn(),
-  }
-};
-
-global.chrome = {
-  storage: mockStorage,
-} as any;
-
 describe('ConfigurationManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset chrome.storage mock
+    (chrome.storage.local.get as jest.Mock).mockImplementation((keys, callback) => {
+      callback({});
+    });
+    (chrome.storage.local.set as jest.Mock).mockImplementation((data, callback) => {
+      callback();
+    });
   });
 
   describe('Unit Tests', () => {
     test('loadConfig returns default config when storage is empty', async () => {
-      mockStorage.local.get.mockImplementation((keys, callback) => {
+      (chrome.storage.local.get as jest.Mock).mockImplementation((keys, callback) => {
         callback({});
       });
 
@@ -31,7 +26,7 @@ describe('ConfigurationManager', () => {
     });
 
     test('saveConfig stores configuration with debouncing', async () => {
-      mockStorage.local.set.mockImplementation((data, callback) => {
+      (chrome.storage.local.set as jest.Mock).mockImplementation((data, callback) => {
         callback();
       });
 
@@ -41,20 +36,37 @@ describe('ConfigurationManager', () => {
       // Wait for debounce
       await new Promise(resolve => setTimeout(resolve, 600));
 
-      expect(mockStorage.local.set).toHaveBeenCalledWith(partialConfig, expect.any(Function));
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(partialConfig, expect.any(Function));
     });
 
-    test('encryptApiKey returns base64 encoded string', async () => {
+    test('encryptApiKey returns encrypted string different from original', async () => {
       const apiKey = 'test-api-key-123';
       const encrypted = await ConfigurationManager.encryptApiKey(apiKey);
-      expect(encrypted).toBe(btoa(apiKey));
+      
+      // Encrypted value should be different from original
+      expect(encrypted).not.toBe(apiKey);
+      
+      // Encrypted value should be a valid base64 string
+      expect(() => atob(encrypted)).not.toThrow();
     });
 
     test('decryptApiKey returns original string', async () => {
       const apiKey = 'test-api-key-123';
-      const encrypted = btoa(apiKey);
+      const encrypted = await ConfigurationManager.encryptApiKey(apiKey);
       const decrypted = await ConfigurationManager.decryptApiKey(encrypted);
       expect(decrypted).toBe(apiKey);
+    });
+
+    test('encryptApiKey handles empty strings', async () => {
+      const apiKey = '';
+      const encrypted = await ConfigurationManager.encryptApiKey(apiKey);
+      const decrypted = await ConfigurationManager.decryptApiKey(encrypted);
+      expect(decrypted).toBe(apiKey);
+    });
+
+    test('decryptApiKey handles decryption errors gracefully', async () => {
+      // Test with invalid encrypted data
+      await expect(ConfigurationManager.decryptApiKey('invalid-encrypted-data')).rejects.toThrow('Failed to decrypt API key');
     });
   });
 
@@ -79,11 +91,11 @@ describe('ConfigurationManager', () => {
           async (config: ExtensionConfig) => {
             // Mock storage to simulate save and load
             let savedData: any = {};
-            mockStorage.local.set.mockImplementation((data, callback) => {
+            (chrome.storage.local.set as jest.Mock).mockImplementation((data, callback) => {
               savedData = { ...savedData, ...data };
               callback();
             });
-            mockStorage.local.get.mockImplementation((keys, callback) => {
+            (chrome.storage.local.get as jest.Mock).mockImplementation((keys, callback) => {
               callback(savedData);
             });
 
@@ -91,7 +103,7 @@ describe('ConfigurationManager', () => {
             await ConfigurationManager.saveConfig(config);
             
             // Manually trigger the callback immediately for testing
-            const setCall = mockStorage.local.set.mock.calls[mockStorage.local.set.mock.calls.length - 1];
+            const setCall = (chrome.storage.local.set as jest.Mock).mock.calls[(chrome.storage.local.set as jest.Mock).mock.calls.length - 1];
             if (setCall && setCall[1]) {
               setCall[1]();
             }
