@@ -1,19 +1,27 @@
 {
   "manifest_version": 3,
-  "name": "BoongAI",
+  "name": "BoongAI Facebook Assistant",
   "version": "1.0.0",
-  "description": "AI Assistant for Facebook Comments",
+  "description": "AI-powered assistant for Facebook comments using @BoongAI mentions",
   "action": {
     "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "dist/background.js"
   },
   "content_scripts": [
     {
       "matches": ["*://*.facebook.com/*"],
-      "js": ["content.js"]
+      "js": ["dist/content.js"],
+      "run_at": "document_idle"
     }
   ],
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.facebook.com/*"
   ]
 }
