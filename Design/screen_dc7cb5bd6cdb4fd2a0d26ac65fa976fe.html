@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<title>BoongAI Settings (M3 Expressive)</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        // M3 Color Roles Approximation
+                        "primary": "#006492", // M3 Primary Blue
+                        "on-primary": "#ffffff",
+                        "primary-container": "#cae6ff",
+                        "on-primary-container": "#001e30",
+                        "surface": "#f8f9ff", // Surface
+                        "surface-container": "#f0f4f9", // Surface Container
+                        "surface-variant": "#e1e2ec",
+                        "on-surface": "#191c20",
+                        "on-surface-variant": "#44474f",
+                        "outline": "#74777f",
+                        // Dark mode equivalents
+                        "dark-primary": "#8aceff",
+                        "dark-on-primary": "#00344e",
+                        "dark-primary-container": "#004b6f",
+                        "dark-on-primary-container": "#cae6ff",
+                        "dark-surface": "#111318",
+                        "dark-surface-container": "#1d2024", 
+                        "dark-on-surface": "#e2e2e9",
+                        "dark-outline": "#8e9099",
+                    },
+                    fontFamily: {
+                        "display": ["Roboto", "Manrope", "sans-serif"],
+                        "body": ["Roboto", "Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "xl": "12px",
+                        "2xl": "16px",
+                        "3xl": "24px", 
+                        "4xl": "28px" // Requested 28dp
+                    },
+                    boxShadow: {
+                        'm3-1': '0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30)',
+                        'm3-2': '0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>.m3-switch input:checked + div {
+            background-color: var(--primary-color, #006492);border-color: var(--primary-color, #006492);
+        }
+        .dark .m3-switch input:checked + div {
+             background-color: #8aceff;border-color: #8aceff;
+        }
+        .m3-switch input:checked + div::after {
+            transform: translateX(20px);
+            background-color: #ffffff;width: 24px;
+            height: 24px;
+        }
+        .dark .m3-switch input:checked + div::after {
+            background-color: #00344e;}
+        .m3-switch input:checked + div .icon-on {
+            opacity: 1;
+        }
+        .m3-switch input:checked + div .icon-off {
+            opacity: 0;
+        }.m3-switch div::after {
+            background-color: #74777f;}
+        .dark .m3-switch div::after {
+            background-color: #8e9099;
+        }.peer:placeholder-shown ~ .floating-label {
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+            color: #44474f;}
+        .dark .peer:placeholder-shown ~ .floating-label {
+             color: #c4c6d0;
+        }
+        .peer:focus ~ .floating-label,
+        .peer:not(:placeholder-shown) ~ .floating-label,
+        .has-value ~ .floating-label {
+            top: -0px;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            background-color: #f8f9ff;padding: 0 4px;
+            color: #006492;}
+        .dark .peer:focus ~ .floating-label,
+        .dark .peer:not(:placeholder-shown) ~ .floating-label,
+        .dark .has-value ~ .floating-label {
+             background-color: #111318;
+             color: #8aceff;
+        }::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body bg-gray-100 dark:bg-black text-on-surface dark:text-dark-on-surface min-h-screen flex items-center justify-center p-4">
+<div class="w-[320px] h-[400px] bg-surface dark:bg-dark-surface rounded-4xl shadow-m3-2 overflow-hidden flex flex-col relative transition-colors duration-300">
+<div class="px-6 pt-6 pb-2 flex items-center justify-between shrink-0">
+<h1 class="text-2xl font-normal text-on-surface dark:text-dark-on-surface tracking-normal font-display">BoongAI</h1>
+<label class="m3-switch relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-[52px] h-8 bg-surface-variant dark:bg-gray-700 border-2 border-outline dark:border-gray-500 peer-focus:outline-none rounded-full transition-all duration-200 relative flex items-center">
+<div class="absolute left-[2px] top-[50%] -translate-y-1/2 h-6 w-6 rounded-full transition-all duration-200 z-10 after:content-[''] after:absolute after:inset-0 after:rounded-full pointer-events-none flex items-center justify-center">
+</div>
+</div>
+</label>
+</div>
+<div class="flex-1 overflow-y-auto px-6 py-2 flex flex-col gap-5">
+<p class="text-sm text-on-surface-variant dark:text-gray-400 mb-1 leading-snug">
+            Configure your AI assistant settings below.
+        </p>
+<div class="flex flex-col gap-5 pt-2">
+<div class="relative group">
+<select class="peer has-value w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 pt-1 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none appearance-none cursor-pointer text-base" id="provider">
+<option value="openai">OpenAI</option>
+<option value="anthropic">Anthropic</option>
+<option value="gemini">Gemini</option>
+</select>
+<label class="floating-label absolute left-3 transition-all duration-200 pointer-events-none font-normal z-10 px-1" for="provider">
+                    AI Provider
+                </label>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-on-surface-variant dark:text-gray-400">
+<span class="material-symbols-outlined">arrow_drop_down</span>
+</div>
+</div>
+<div class="relative group">
+<select class="peer has-value w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 pt-1 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none appearance-none cursor-pointer text-base" id="model">
+<option value="gpt-4o">GPT-4o</option>
+<option value="gpt-4-turbo">GPT-4 Turbo</option>
+<option value="gpt-3.5">GPT-3.5</option>
+</select>
+<label class="floating-label absolute left-3 transition-all duration-200 pointer-events-none font-normal z-10 px-1" for="model">
+                    AI Model
+                </label>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-on-surface-variant dark:text-gray-400">
+<span class="material-symbols-outlined">arrow_drop_down</span>
+</div>
+</div>
+<div class="relative group">
+<input class="peer w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none text-base placeholder-transparent font-mono" id="apikey" placeholder=" " type="password" value="sk-xxxxxxxx"/>
+<label class="floating-label absolute left-3 transition-all duration-200 pointer-events-none font-normal z-10 px-1" for="apikey">
+                    API Key
+                </label>
+<button class="absolute inset-y-0 right-0 flex items-center px-4 text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-dark-on-surface" type="button">
+<span class="material-symbols-outlined text-[24px]">visibility</span>
+</button>
+</div>
+</div>
+</div>
+<div class="p-6 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-4">
+<button class="w-full h-10 rounded-full bg-primary dark:bg-dark-primary text-on-primary dark:text-dark-on-primary font-medium text-sm tracking-wide shadow-m3-1 hover:shadow-m3-2 hover:bg-opacity-90 active:shadow-none transition-all flex items-center justify-center gap-2">
+            Save Changes
+        </button>
+<div class="text-center">
+<p class="text-[11px] font-medium tracking-wide text-on-surface-variant/80 dark:text-gray-500">
+                Type <span class="text-primary dark:text-dark-primary font-bold">@BoongAI</span> [request] in comments
+            </p>
+</div>
+</div>
+</div>
+
+</body></html>
