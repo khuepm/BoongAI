@@ -10,11 +10,11 @@ export class ConfigurationManager {
         try {
           // Validate loaded configuration
           const config: ExtensionConfig = {
-            version: result.version || DEFAULT_CONFIG.version,
-            masterSwitch: result.masterSwitch !== undefined ? result.masterSwitch : DEFAULT_CONFIG.masterSwitch,
+            version: typeof result.version === 'string' && result.version ? result.version : DEFAULT_CONFIG.version,
+            masterSwitch: typeof result.masterSwitch === 'boolean' ? result.masterSwitch : DEFAULT_CONFIG.masterSwitch,
             aiProvider: this.validateProvider(result.aiProvider) ? result.aiProvider : DEFAULT_CONFIG.aiProvider,
-            model: result.model || DEFAULT_CONFIG.model,
-            apiKey: result.apiKey || DEFAULT_CONFIG.apiKey,
+            model: typeof result.model === 'string' && result.model ? result.model : DEFAULT_CONFIG.model,
+            apiKey: typeof result.apiKey === 'string' ? result.apiKey : DEFAULT_CONFIG.apiKey,
             lastValidated: typeof result.lastValidated === 'number' ? result.lastValidated : DEFAULT_CONFIG.lastValidated
           };
           resolve(config);
@@ -39,6 +39,7 @@ export class ConfigurationManager {
       
       this.debounceTimer = setTimeout(() => {
         chrome.storage.local.set(config, () => {
+          this.debounceTimer = null;
           resolve();
         });
       }, 500);

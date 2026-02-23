@@ -139,5 +139,50 @@ describe('ConfigurationManager', () => {
         propertyTestConfig
       );
     });
+
+    test('Feature: boongai-facebook-assistant, Property 37: Corrupted config recovery', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.oneof(
+            // Various types of corrupted data
+            fc.constant(null),
+            fc.constant(undefined),
+            fc.constant('invalid-string'),
+            fc.constant(12345),
+            fc.record({
+              version: fc.constant(null),
+              masterSwitch: fc.constant('not-a-boolean'),
+              aiProvider: fc.constant('invalid-provider'),
+              model: fc.constant(null),
+              apiKey: fc.constant(null),
+              lastValidated: fc.constant('not-a-number')
+            }),
+            fc.record({
+              // Missing required fields
+              version: fc.constant('1.0.0')
+            })
+          ),
+          async (corruptedData) => {
+            // Mock storage to return corrupted data
+            (chrome.storage.local.get as jest.Mock).mockImplementation((keys, callback) => {
+              callback(corruptedData);
+            });
+
+            // Load configuration
+            const loadedConfig = await ConfigurationManager.loadConfig();
+
+            // Verify it returns valid default configuration
+            expect(loadedConfig).toBeDefined();
+            expect(loadedConfig.version).toBe(DEFAULT_CONFIG.version);
+            expect(typeof loadedConfig.masterSwitch).toBe('boolean');
+            expect(['openai', 'gemini', 'claude']).toContain(loadedConfig.aiProvider);
+            expect(typeof loadedConfig.model).toBe('string');
+            expect(typeof loadedConfig.apiKey).toBe('string');
+            expect(typeof loadedConfig.lastValidated).toBe('number');
+          }
+        ),
+        propertyTestConfig
+      );
+    });
   });
 });
