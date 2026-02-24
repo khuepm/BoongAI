@@ -60,7 +60,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Implement getValidationError() to parse and format error messages
     - _Requirements: 3.2, 3.3, 3.4, 3.5_
   
-  - [~] 3.3 Write property test for validation triggering
+  - [x] 3.3 Write property test for validation triggering
     - **Property 4: API key validation triggers on input**
     - **Validates: Requirements 3.1**
   

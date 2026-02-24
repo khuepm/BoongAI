@@ -1,5 +1,6 @@
 import { APIValidator } from '../apiValidator';
 import { AIProvider } from '@/types';
+import fc from 'fast-check';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -288,4 +289,66 @@ describe('APIValidator', () => {
       }).not.toThrow();
     });
   });
+
+  describe('Property-Based Tests', () => {
+    // Property test configuration
+    const propertyTestConfig = {
+      numRuns: 100,
+      verbose: false
+    };
+
+    test('Feature: boongai-facebook-assistant, Property 4: API key validation triggers on input', async () => {
+      /**
+       * Validates: Requirements 3.1
+       * 
+       * Property: For any API key input or modification, a validation request 
+       * should be initiated to the selected AI provider.
+       */
+      await fc.assert(
+        fc.asyncProperty(
+          fc.constantFrom('openai' as const, 'gemini' as const, 'claude' as const),
+          fc.string({ minLength: 20, maxLength: 100 }),
+          async (provider: AIProvider, apiKey: string) => {
+            // Clear cache to ensure fresh validation
+            APIValidator.clearCache();
+            
+            // Mock successful response
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+              ok: true,
+              status: 200,
+              json: async () => ({ data: [] })
+            });
+
+            // Trigger validation
+            const result = await APIValidator.validateApiKey(provider, apiKey);
+
+            // Verify that a validation request was initiated
+            expect(global.fetch).toHaveBeenCalled();
+            
+            // Verify the request was made to the correct provider
+            const fetchCall = (global.fetch as jest.Mock).mock.calls[(global.fetch as jest.Mock).mock.calls.length - 1];
+            const url = fetchCall[0];
+            
+            switch (provider) {
+              case 'openai':
+                expect(url).toContain('api.openai.com');
+                break;
+              case 'gemini':
+                expect(url).toContain('generativelanguage.googleapis.com');
+                break;
+              case 'claude':
+                expect(url).toContain('api.anthropic.com');
+                break;
+            }
+
+            // Verify result contains timestamp (indicating validation occurred)
+            expect(result.timestamp).toBeDefined();
+            expect(typeof result.timestamp).toBe('number');
+          }
+        ),
+        propertyTestConfig
+      );
+    }, 30000); // 30 second timeout
+  });
 });
+
