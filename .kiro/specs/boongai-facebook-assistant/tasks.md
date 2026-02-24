@@ -68,7 +68,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 5: Connection indicator reflects validation state**
     - **Validates: Requirements 3.2, 3.3**
   
-  - [~] 3.5 Write property test for validation error messages
+  - [x] 3.5 Write property test for validation error messages
     - **Property 6: Validation failure shows error message**
     - **Validates: Requirements 3.5**
 

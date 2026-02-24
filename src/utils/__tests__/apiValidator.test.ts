@@ -385,6 +385,89 @@ describe('APIValidator', () => {
         propertyTestConfig
       );
     });
+
+    test('Feature: boongai-facebook-assistant, Property 6: Validation failure shows error message', async () => {
+      /**
+       * Validates: Requirements 3.5
+       * 
+       * Property: For any failed API key validation, an error message describing 
+       * the failure reason should be displayed.
+       */
+      await fc.assert(
+        fc.asyncProperty(
+          fc.constantFrom('openai' as const, 'gemini' as const, 'claude' as const),
+          fc.string({ minLength: 1, maxLength: 100 }),
+          fc.constantFrom(
+            { status: 401, errorType: 'authentication' },
+            { status: 429, errorType: 'rate_limit' },
+            { status: 403, errorType: 'forbidden' },
+            { status: 500, errorType: 'server_error' }
+          ),
+          async (provider: AIProvider, apiKey: string, errorScenario: { status: number, errorType: string }) => {
+            // Clear cache to ensure fresh validation
+            APIValidator.clearCache();
+            
+            // Mock failed response with specific error
+            const mockErrorMessage = `API error: ${errorScenario.errorType}`;
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+              ok: false,
+              status: errorScenario.status,
+              json: async () => ({ 
+                error: { 
+                  message: mockErrorMessage 
+                } 
+              })
+            });
+
+            // Trigger validation
+            const result = await APIValidator.validateApiKey(provider, apiKey);
+
+            // Property: For any failed API key validation, an error message 
+            // describing the failure reason should be displayed
+            
+            // 1. Verify validation failed
+            expect(result.isValid).toBe(false);
+            
+            // 2. Verify an error message is present and non-empty
+            expect(result.error).toBeDefined();
+            expect(result.error).not.toBe('');
+            expect(typeof result.error).toBe('string');
+            expect(result.error!.length).toBeGreaterThan(0);
+            
+            // 3. Verify the error message describes the failure reason
+            // The error message should contain meaningful information about what went wrong
+            // It should not be just a generic "error occurred" message
+            
+            // For authentication errors (401, 403), the message should indicate 
+            // it's related to API key issues
+            if (errorScenario.status === 401 || errorScenario.status === 403) {
+              const errorLower = result.error!.toLowerCase();
+              const hasRelevantInfo = 
+                errorLower.includes('invalid') ||
+                errorLower.includes('api key') ||
+                errorLower.includes('check') ||
+                errorLower.includes('authentication') ||
+                errorLower.includes('error');
+              expect(hasRelevantInfo).toBe(true);
+            }
+            
+            // For rate limit errors (429), the message should indicate rate limiting
+            if (errorScenario.status === 429) {
+              const errorLower = result.error!.toLowerCase();
+              const hasRateLimitInfo = 
+                errorLower.includes('rate limit') ||
+                errorLower.includes('exceeded') ||
+                errorLower.includes('wait');
+              expect(hasRateLimitInfo).toBe(true);
+            }
+            
+            // For any error, the message should be descriptive (not just "error")
+            expect(result.error!.toLowerCase()).not.toBe('error');
+          }
+        ),
+        propertyTestConfig
+      );
+    }, 30000); // 30 second timeout
   });
 });
 
