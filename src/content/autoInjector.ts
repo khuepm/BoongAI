@@ -1,8 +1,69 @@
 // Auto Injector Module
 export class AutoInjector {
   static async generateReply(commentId: string, aiResponse: string): Promise<boolean> {
-    // TODO: Implement reply generation
-    return false;
+    try {
+      // Step 1: Find reply button
+      const replyButton = this.findReplyButton(commentId);
+      if (!replyButton) {
+        console.error('[BoongAI] Reply button not found');
+        return false;
+      }
+
+      // Step 2: Click reply button to open input field
+      await this.clickReplyButton(replyButton);
+
+      // Step 3: Find the reply input field
+      const inputField = this.findReplyInputField(commentId);
+      if (!inputField) {
+        console.error('[BoongAI] Reply input field not found');
+        return false;
+      }
+
+      // Step 4: Inject AI response text
+      await this.injectText(inputField, aiResponse);
+
+      // Step 5: Submit the reply
+      await this.submitReply(inputField);
+
+      console.log('[BoongAI] Reply generated successfully');
+      return true;
+    } catch (error) {
+      console.error('[BoongAI] Error generating reply:', error);
+      return false;
+    }
+  }
+
+  private static findReplyInputField(commentId: string): HTMLElement | null {
+    // Find the comment element
+    const commentElement = document.querySelector(`[data-boongai-comment-id="${commentId}"]`);
+    if (!commentElement) {
+      return null;
+    }
+
+    // Look for reply input field near the comment
+    const container = commentElement.closest('[role="article"]') || commentElement.parentElement;
+    if (!container) {
+      return null;
+    }
+
+    // Try multiple selectors for input field
+    const selectors = [
+      '[contenteditable="true"]',
+      'textarea[placeholder*="reply"]',
+      'textarea[placeholder*="comment"]',
+      'div[role="textbox"]',
+      'input[type="text"]'
+    ];
+
+    for (const selector of selectors) {
+      const inputs = container.querySelectorAll(selector);
+      // Get the last one (most recently added, which should be the reply field)
+      if (inputs.length > 0) {
+        return inputs[inputs.length - 1] as HTMLElement;
+      }
+    }
+
+    return null;
   }
 
   static findReplyButton(commentId: string): HTMLElement | null {
@@ -146,7 +207,83 @@ export class AutoInjector {
   }
 
   static async submitReply(inputField: HTMLElement): Promise<void> {
-    // TODO: Submit the reply
+    // Method 1: Try to find and click the submit button
+    const submitButton = this.findSubmitButton(inputField);
+    if (submitButton) {
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      });
+      submitButton.dispatchEvent(clickEvent);
+      
+      // Wait for submission to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return;
+    }
+
+    // Method 2: Simulate Enter key press
+    const enterEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13
+    });
+    inputField.dispatchEvent(enterEvent);
+
+    // Also trigger keypress and keyup for compatibility
+    const keypressEvent = new KeyboardEvent('keypress', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13
+    });
+    inputField.dispatchEvent(keypressEvent);
+
+    const keyupEvent = new KeyboardEvent('keyup', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13
+    });
+    inputField.dispatchEvent(keyupEvent);
+
+    // Wait for submission to complete
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+
+  private static findSubmitButton(inputField: HTMLElement): HTMLElement | null {
+    // Find the submit button near the input field
+    const container = inputField.closest('[role="dialog"], [role="article"], form, .comment-form');
+    if (!container) {
+      return null;
+    }
+
+    // Try multiple selectors for submit button
+    const selectors = [
+      'button[type="submit"]',
+      'div[role="button"][aria-label*="Post"]',
+      'div[role="button"][aria-label*="Đăng"]', // Vietnamese
+      'button[aria-label*="Comment"]',
+      'button[aria-label*="Reply"]',
+      '[data-testid*="submit"]',
+      '[data-testid*="post"]'
+    ];
+
+    for (const selector of selectors) {
+      const button = container.querySelector(selector) as HTMLElement;
+      if (button) {
+        return button;
+      }
+    }
+
+    return null;
   }
 
   static formatReply(aiResponse: string): string {
