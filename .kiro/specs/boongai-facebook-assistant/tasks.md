@@ -232,33 +232,33 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 30: Error message visibility duration**
     - **Validates: Requirements 11.3**
 
-- [~] 8. Implement Auto Injector module
-  - [ ] 8.1 Create reply button location and interaction
+- [-] 8. Implement Auto Injector module
+  - [x] 8.1 Create reply button location and interaction
     - Implement findReplyButton() to locate reply button for command comment
     - Implement clickReplyButton() to programmatically click reply button
     - Wait for reply input field to appear (100-200ms delays)
     - _Requirements: 10.1, 10.2_
   
-  - [ ] 8.2 Implement text injection with Facebook compatibility
+  - [x] 8.2 Implement text injection with Facebook compatibility
     - Implement injectText() using clipboard API with fallback to direct DOM manipulation
     - Trigger input, change, and keydown events for React compatibility
     - Prefix all replies with "[🤖 BoongAI trả lời]: "
     - Preserve line breaks and formatting from AI response
     - _Requirements: 10.3, 10.4, 15.1, 15.2_
   
-  - [ ] 8.3 Implement content formatting and sanitization
+  - [x] 8.3 Implement content formatting and sanitization
     - Truncate responses exceeding 8000 characters with "... (nội dung đã được rút gọn)"
     - Remove unsupported markdown formatting
     - Sanitize malicious scripts and HTML injection attempts
     - _Requirements: 15.3, 15.4, 15.5_
   
-  - [ ] 8.4 Implement reply submission
+  - [x] 8.4 Implement reply submission
     - Implement submitReply() to simulate Enter key press or click submit button
     - Complete auto-reply process within 2 seconds after receiving AI response
     - Trigger Ghost UI removal on successful reply
     - _Requirements: 10.5, 10.6, 10.7_
   
-  - [ ] 8.5 Write property test for reply button location
+  - [x] 8.5 Write property test for reply button location
     - **Property 24: Reply button location**
     - **Validates: Requirements 10.1**
   
