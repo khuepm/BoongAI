@@ -64,7 +64,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 4: API key validation triggers on input**
     - **Validates: Requirements 3.1**
   
-  - [~] 3.4 Write property test for connection indicator state
+  - [x] 3.4 Write property test for connection indicator state
     - **Property 5: Connection indicator reflects validation state**
     - **Validates: Requirements 3.2, 3.3**
   

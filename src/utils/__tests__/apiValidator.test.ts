@@ -349,6 +349,42 @@ describe('APIValidator', () => {
         propertyTestConfig
       );
     }, 30000); // 30 second timeout
+
+    test('Feature: boongai-facebook-assistant, Property 5: Connection indicator reflects validation state', () => {
+      /**
+       * Validates: Requirements 3.2, 3.3
+       * 
+       * Property: For any API key validation result, the connection indicator 
+       * should display green when validation succeeds and red when validation fails.
+       */
+      fc.assert(
+        fc.property(
+          fc.boolean(),
+          (isValid: boolean) => {
+            // Set up DOM with connection indicator
+            document.body.innerHTML = '<div data-testid="connection-indicator"></div>';
+            
+            // Update connection indicator based on validation result
+            APIValidator.updateConnectionIndicator(isValid);
+            
+            // Get the indicator element
+            const indicator = document.querySelector('[data-testid="connection-indicator"]');
+            
+            // Verify the indicator reflects the validation state
+            if (isValid) {
+              // When validation succeeds, indicator should display green (valid class)
+              expect(indicator?.classList.contains('valid')).toBe(true);
+              expect(indicator?.classList.contains('invalid')).toBe(false);
+            } else {
+              // When validation fails, indicator should display red (invalid class)
+              expect(indicator?.classList.contains('invalid')).toBe(true);
+              expect(indicator?.classList.contains('valid')).toBe(false);
+            }
+          }
+        ),
+        propertyTestConfig
+      );
+    });
   });
 });
 
