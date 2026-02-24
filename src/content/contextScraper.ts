@@ -2,7 +2,6 @@
 import { PostContent } from '@/types';
 
 export class ContextScraper {
-  private static readonly EXTRACTION_TIMEOUT = 2000; // 2 seconds
   private static readonly MAX_RETRY_ATTEMPTS = 3;
   private static readonly RETRY_DELAY = 500; // 500ms
 
@@ -10,8 +9,6 @@ export class ContextScraper {
    * Extract complete post content from Facebook DOM
    */
   static async extractPostContent(postId: string): Promise<PostContent> {
-    const startTime = Date.now();
-    
     try {
       // Find the post container
       const postElement = this.findPostContainer(postId);
@@ -60,7 +57,7 @@ export class ContextScraper {
     ];
 
     for (const selector of selectors) {
-      const elements = document.querySelectorAll(selector);
+      const elements = Array.from(document.querySelectorAll(selector));
       for (const element of elements) {
         // Check if this element or its parent contains the postId
         const htmlElement = element as HTMLElement;
@@ -71,7 +68,7 @@ export class ContextScraper {
     }
 
     // Fallback: search by data attributes
-    const allArticles = document.querySelectorAll('[role="article"]');
+    const allArticles = Array.from(document.querySelectorAll('[role="article"]'));
     for (const article of allArticles) {
       const htmlElement = article as HTMLElement;
       if (this.elementMatchesPostId(htmlElement, postId)) {
@@ -146,7 +143,7 @@ export class ContextScraper {
     const seeMoreTexts = ['See more', 'Xem thêm', 'See More', 'More'];
     
     // Try role-based selectors
-    const buttons = postElement.querySelectorAll('[role="button"]');
+    const buttons = Array.from(postElement.querySelectorAll('[role="button"]'));
     for (const button of buttons) {
       const text = button.textContent?.trim() || '';
       if (seeMoreTexts.some(seeMore => text.includes(seeMore))) {
@@ -155,7 +152,7 @@ export class ContextScraper {
     }
 
     // Try link-based selectors
-    const links = postElement.querySelectorAll('a, span[role="button"]');
+    const links = Array.from(postElement.querySelectorAll('a, span[role="button"]'));
     for (const link of links) {
       const text = link.textContent?.trim() || '';
       if (seeMoreTexts.some(seeMore => text.includes(seeMore))) {
