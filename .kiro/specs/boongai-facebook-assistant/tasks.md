@@ -232,7 +232,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 30: Error message visibility duration**
     - **Validates: Requirements 11.3**
 
-- [-] 8. Implement Auto Injector module
+- [ ] 8. Implement Auto Injector module
   - [x] 8.1 Create reply button location and interaction
     - Implement findReplyButton() to locate reply button for command comment
     - Implement clickReplyButton() to programmatically click reply button
@@ -262,7 +262,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 24: Reply button location**
     - **Validates: Requirements 10.1**
   
-  - [ ] 8.6 Write property test for reply button click
+  - [-] 8.6 Write property test for reply button click
     - **Property 25: Reply button click opens input**
     - **Validates: Requirements 10.2**
   
@@ -294,7 +294,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 41: Malicious content sanitization**
     - **Validates: Requirements 15.5**
 
-- [~] 9. Implement Error Handler utility
+- [ ] 9. Implement Error Handler utility
   - [ ] 9.1 Create error handling and logging infrastructure
     - Define ExtensionError interface and ErrorCode type
     - Define ERROR_MESSAGES constant with user-friendly messages
