@@ -1,47 +1,467 @@
-// DOM Observer Module
-import { CommentData } from '@/types';
+/**
+ * DOM Observer Module
+ * 
+ * Monitors Facebook DOM for mention triggers (@BoongAI) and comment submissions.
+ * Uses MutationObserver API for efficient DOM change tracking.
+ */
 
-export class DOMObserver {
+export interface CommentData {
+  commentId: string;
+  commentText: string;
+  postId: string;
+  timestamp: number;
+}
+
+export interface DOMObserverCallbacks {
+  onMentionDetected?: (inputElement: HTMLElement) => void;
+  onCommentSubmitted?: (commentData: CommentData) => void;
+}
+
+class DOMObserverImpl {
   private observer: MutationObserver | null = null;
   private isActive: boolean = false;
+  private callbacks: DOMObserverCallbacks = {};
+  private mentionRegex = /@BoongAI\b/gi;
+  private debounceTimers: Map<HTMLElement, NodeJS.Timeout> = new Map();
+  private highlightedElements: Set<Node> = new Set();
 
-  initialize(): void {
+  /**
+   * Initialize the DOM observer and start monitoring Facebook page
+   */
+  initialize(callbacks: DOMObserverCallbacks = {}): void {
+    if (this.isActive) {
+      return;
+    }
+
+    this.callbacks = callbacks;
+    this.isActive = true;
+
+    // Set up MutationObserver to monitor DOM changes
     this.observer = new MutationObserver((mutations) => {
-      // TODO: Handle DOM mutations
+      this.handleMutations(mutations);
     });
 
-    // TODO: Configure observer to monitor Facebook DOM
-    this.isActive = true;
+    // Start observing the document body for changes
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      characterDataOldValue: true,
+    });
+
+    // Monitor existing comment input fields
+    this.monitorExistingInputFields();
+
+    // Set up event delegation for input events
+    document.body.addEventListener('input', this.handleInputEvent, true);
+    document.body.addEventListener('keyup', this.handleInputEvent, true);
   }
 
-  detectMentionTrigger(inputElement: HTMLElement): boolean {
-    // TODO: Implement mention detection with regex /@BoongAI\b/gi
-    return false;
-  }
-
-  highlightMention(textNode: Node): void {
-    // TODO: Apply blue gradient styling to detected mention
-  }
-
-  captureCommentSubmission(commentElement: HTMLElement): CommentData {
-    // TODO: Extract comment data from submitted comment
-    return {
-      commentId: '',
-      commentText: '',
-      postId: '',
-      timestamp: Date.now()
-    };
-  }
-
+  /**
+   * Clean up observers and event listeners
+   */
   cleanup(): void {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
     }
+
     this.isActive = false;
+    this.callbacks = {};
+
+    // Clear all debounce timers
+    this.debounceTimers.forEach((timer) => clearTimeout(timer));
+    this.debounceTimers.clear();
+
+    // Remove event listeners
+    document.body.removeEventListener('input', this.handleInputEvent, true);
+    document.body.removeEventListener('keyup', this.handleInputEvent, true);
+
+    // Clear highlighted elements
+    this.highlightedElements.clear();
   }
 
+  /**
+   * Check if the observer is currently active
+   */
   isObserverActive(): boolean {
     return this.isActive;
   }
+
+  /**
+   * Detect if input element contains @BoongAI mention trigger
+   */
+  detectMentionTrigger(inputElement: HTMLElement): boolean {
+    if (!this.isActive) {
+      return false;
+    }
+
+    const text = this.getTextContent(inputElement);
+    this.mentionRegex.lastIndex = 0; // Reset regex state
+    return this.mentionRegex.test(text);
+  }
+
+  /**
+   * Highlight @BoongAI mention in the text
+   */
+  highlightMention(textNode: Node): void {
+    if (!this.isActive || !textNode.textContent) {
+      return;
+    }
+
+    const text = textNode.textContent;
+    this.mentionRegex.lastIndex = 0; // Reset regex state
+    
+    if (!this.mentionRegex.test(text)) {
+      return;
+    }
+
+    // Mark this node as highlighted
+    this.highlightedElements.add(textNode);
+
+    // Apply highlighting by wrapping mention in a span
+    const parent = textNode.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    // Create a temporary container to parse the highlighted HTML
+    const container = document.createElement('div');
+    this.mentionRegex.lastIndex = 0; // Reset regex state
+    container.innerHTML = text.replace(
+      this.mentionRegex,
+      '<span class="boongai-mention-highlight" style="background: linear-gradient(90deg, #4267B2 0%, #5890FF 100%); color: white; padding: 2px 4px; border-radius: 3px; font-weight: 500;">$&</span>'
+    );
+
+    // Replace the text node with the highlighted content
+    while (container.firstChild) {
+      parent.insertBefore(container.firstChild, textNode);
+    }
+    parent.removeChild(textNode);
+  }
+
+  /**
+   * Capture comment submission and extract comment data
+   */
+  captureCommentSubmission(commentElement: HTMLElement): CommentData | null {
+    if (!this.isActive) {
+      return null;
+    }
+
+    try {
+      // Extract comment data from the DOM element
+      const commentId = this.extractCommentId(commentElement);
+      const commentText = this.getTextContent(commentElement);
+      const postId = this.extractPostId(commentElement);
+
+      if (!commentId || !commentText || !postId) {
+        return null;
+      }
+
+      const commentData: CommentData = {
+        commentId,
+        commentText,
+        postId,
+        timestamp: Date.now(),
+      };
+
+      // Trigger callback if provided
+      if (this.callbacks.onCommentSubmitted) {
+        this.callbacks.onCommentSubmitted(commentData);
+      }
+
+      return commentData;
+    } catch (error) {
+      console.error('[BoongAI] Error capturing comment submission:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Handle mutations from MutationObserver
+   */
+  private handleMutations(mutations: MutationRecord[]): void {
+    for (const mutation of mutations) {
+      // Check for new comment input fields
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as HTMLElement;
+            this.checkForCommentInputFields(element);
+            this.checkForSubmittedComments(element);
+          }
+        });
+      }
+
+      // Check for text changes in existing input fields
+      if (mutation.type === 'characterData' && mutation.target.parentElement) {
+        const inputElement = this.findInputElement(mutation.target.parentElement);
+        if (inputElement) {
+          this.debouncedMentionCheck(inputElement);
+        }
+      }
+    }
+  }
+
+  /**
+   * Handle input events with debouncing
+   */
+  private handleInputEvent = (event: Event): void => {
+    const target = event.target as HTMLElement;
+    if (this.isCommentInputField(target)) {
+      this.debouncedMentionCheck(target);
+    }
+  };
+
+  /**
+   * Debounced mention detection (50ms threshold)
+   */
+  private debouncedMentionCheck(inputElement: HTMLElement): void {
+    // Clear existing timer for this element
+    const existingTimer = this.debounceTimers.get(inputElement);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Set new timer
+    const timer = setTimeout(() => {
+      if (this.detectMentionTrigger(inputElement)) {
+        // Find text nodes and highlight them
+        this.highlightMentionsInElement(inputElement);
+        
+        // Trigger callback if provided
+        if (this.callbacks.onMentionDetected) {
+          this.callbacks.onMentionDetected(inputElement);
+        }
+      }
+      this.debounceTimers.delete(inputElement);
+    }, 50);
+
+    this.debounceTimers.set(inputElement, timer);
+  }
+
+  /**
+   * Monitor existing comment input fields on page
+   */
+  private monitorExistingInputFields(): void {
+    const inputFields = this.findAllCommentInputFields();
+    inputFields.forEach((field) => {
+      this.debouncedMentionCheck(field);
+    });
+  }
+
+  /**
+   * Check element and its descendants for comment input fields
+   */
+  private checkForCommentInputFields(element: HTMLElement): void {
+    if (this.isCommentInputField(element)) {
+      this.debouncedMentionCheck(element);
+    }
+
+    // Check descendants
+    const inputFields = element.querySelectorAll('[contenteditable="true"], textarea');
+    inputFields.forEach((field) => {
+      if (this.isCommentInputField(field as HTMLElement)) {
+        this.debouncedMentionCheck(field as HTMLElement);
+      }
+    });
+  }
+
+  /**
+   * Check element for submitted comments
+   */
+  private checkForSubmittedComments(element: HTMLElement): void {
+    // Look for comment elements that might have been just posted
+    const commentSelectors = [
+      '[role="article"]',
+      '[data-testid*="comment"]',
+      '.comment',
+    ];
+
+    commentSelectors.forEach((selector) => {
+      if (element.matches(selector)) {
+        this.captureCommentSubmission(element);
+      }
+
+      element.querySelectorAll(selector).forEach((commentEl) => {
+        this.captureCommentSubmission(commentEl as HTMLElement);
+      });
+    });
+  }
+
+  /**
+   * Find all comment input fields on the page
+   */
+  private findAllCommentInputFields(): HTMLElement[] {
+    const fields: HTMLElement[] = [];
+    
+    // Facebook uses contenteditable divs for comments
+    const editableElements = document.querySelectorAll('[contenteditable="true"]');
+    editableElements.forEach((el) => {
+      if (this.isCommentInputField(el as HTMLElement)) {
+        fields.push(el as HTMLElement);
+      }
+    });
+
+    return fields;
+  }
+
+  /**
+   * Check if element is a comment input field
+   */
+  private isCommentInputField(element: HTMLElement): boolean {
+    // Check for contenteditable attribute
+    if (element.getAttribute('contenteditable') !== 'true') {
+      return false;
+    }
+
+    // Check for Facebook-specific comment input indicators
+    const role = element.getAttribute('role');
+    const ariaLabel = element.getAttribute('aria-label');
+    const placeholder = element.getAttribute('placeholder');
+
+    // Common patterns for Facebook comment inputs
+    const commentPatterns = [
+      /comment/i,
+      /reply/i,
+      /write/i,
+      /bình luận/i, // Vietnamese
+    ];
+
+    const textToCheck = [role, ariaLabel, placeholder].filter(Boolean).join(' ');
+    return commentPatterns.some((pattern) => pattern.test(textToCheck));
+  }
+
+  /**
+   * Find the input element containing a node
+   */
+  private findInputElement(node: HTMLElement): HTMLElement | null {
+    let current: HTMLElement | null = node;
+    while (current && current !== document.body) {
+      if (this.isCommentInputField(current)) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  /**
+   * Get text content from element (supports both Lexical and Draft.js)
+   */
+  private getTextContent(element: HTMLElement): string {
+    // Try Lexical editor format
+    const lexicalContent = element.querySelector('[data-lexical-editor="true"]');
+    if (lexicalContent) {
+      return lexicalContent.textContent || '';
+    }
+
+    // Try Draft.js format
+    const draftContent = element.querySelector('[data-contents="true"]');
+    if (draftContent) {
+      return draftContent.textContent || '';
+    }
+
+    // Fallback to direct text content
+    return element.textContent || element.innerText || '';
+  }
+
+  /**
+   * Highlight mentions in an element
+   */
+  private highlightMentionsInElement(element: HTMLElement): void {
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    const textNodes: Node[] = [];
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (node.textContent && node.textContent.includes('@BoongAI')) {
+        textNodes.push(node);
+      }
+    }
+
+    // Highlight each text node containing the mention
+    textNodes.forEach((textNode) => {
+      if (!this.highlightedElements.has(textNode)) {
+        this.highlightMention(textNode);
+      }
+    });
+  }
+
+  /**
+   * Extract comment ID from comment element
+   */
+  private extractCommentId(element: HTMLElement): string {
+    // Try various Facebook comment ID attributes
+    const idAttributes = [
+      'data-comment-id',
+      'data-commentid',
+      'id',
+      'data-testid',
+    ];
+
+    for (const attr of idAttributes) {
+      const value = element.getAttribute(attr);
+      if (value) {
+        return value;
+      }
+    }
+
+    // Generate a fallback ID based on timestamp and random value
+    return `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Extract post ID from comment element
+   */
+  private extractPostId(element: HTMLElement): string {
+    // Traverse up to find the post container
+    let current: HTMLElement | null = element;
+    while (current && current !== document.body) {
+      // Check for post ID attributes
+      const postIdAttributes = [
+        'data-post-id',
+        'data-postid',
+        'data-ft',
+      ];
+
+      for (const attr of postIdAttributes) {
+        const value = current.getAttribute(attr);
+        if (value) {
+          // Extract ID from data-ft JSON if needed
+          if (attr === 'data-ft') {
+            try {
+              const ft = JSON.parse(value);
+              if (ft.mf_story_key) {
+                return ft.mf_story_key;
+              }
+            } catch (e) {
+              // Continue to next attribute
+            }
+          }
+          return value;
+        }
+      }
+
+      // Check if this is a post container
+      if (current.getAttribute('role') === 'article') {
+        const id = current.getAttribute('id');
+        if (id) {
+          return id;
+        }
+      }
+
+      current = current.parentElement;
+    }
+
+    // Generate a fallback ID
+    return `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
 }
+
+// Export singleton instance
+export const DOMObserver = new DOMObserverImpl();
