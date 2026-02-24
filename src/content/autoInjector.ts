@@ -150,7 +150,14 @@ export class AutoInjector {
   }
 
   static formatReply(aiResponse: string): string {
-    let formatted = `[🤖 BoongAI trả lời]: ${aiResponse}`;
+    // First, sanitize the content
+    let sanitized = this.sanitizeContent(aiResponse);
+    
+    // Remove unsupported markdown formatting
+    sanitized = this.removeUnsupportedMarkdown(sanitized);
+    
+    // Add prefix
+    let formatted = `[🤖 BoongAI trả lời]: ${sanitized}`;
     
     // Truncate if exceeds 8000 characters
     if (formatted.length > 8000) {
@@ -161,10 +168,78 @@ export class AutoInjector {
   }
 
   static sanitizeContent(content: string): string {
-    // TODO: Remove malicious scripts and HTML injection
-    return content
-      .replace(/<script[^>]*>.*?<\/script>/gi, '')
-      .replace(/on\w+\s*=/gi, '')
-      .replace(/javascript:/gi, '');
+    // Remove malicious scripts and HTML injection attempts
+    let sanitized = content;
+    
+    // Remove script tags (case-insensitive, handles various formats)
+    sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    
+    // Remove event handlers (onclick, onerror, onload, etc.)
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
+    
+    // Remove javascript: protocol
+    sanitized = sanitized.replace(/javascript:/gi, '');
+    
+    // Remove data: URLs that could contain scripts
+    sanitized = sanitized.replace(/data:text\/html[^"'\s]*/gi, '');
+    
+    // Remove iframe tags
+    sanitized = sanitized.replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
+    
+    // Remove object and embed tags
+    sanitized = sanitized.replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '');
+    sanitized = sanitized.replace(/<embed\b[^>]*>/gi, '');
+    
+    // Remove form tags
+    sanitized = sanitized.replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '');
+    
+    // Remove meta tags
+    sanitized = sanitized.replace(/<meta\b[^>]*>/gi, '');
+    
+    return sanitized;
+  }
+
+  private static removeUnsupportedMarkdown(content: string): string {
+    // Facebook doesn't support most markdown, so we remove it
+    let cleaned = content;
+    
+    // Remove markdown headers (# ## ###)
+    cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+    
+    // Remove markdown bold (**text** or __text__)
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+    cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
+    
+    // Remove markdown italic (*text* or _text_)
+    cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1');
+    cleaned = cleaned.replace(/_([^_]+)_/g, '$1');
+    
+    // Remove markdown code blocks (```code```)
+    cleaned = cleaned.replace(/```[\s\S]*?```/g, (match) => {
+      // Extract code content without backticks
+      return match.replace(/```\w*\n?/g, '').replace(/```/g, '');
+    });
+    
+    // Remove inline code (`code`)
+    cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
+    
+    // Remove markdown links [text](url) - keep only text
+    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    
+    // Remove markdown images ![alt](url)
+    cleaned = cleaned.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
+    
+    // Remove markdown horizontal rules (---, ***, ___)
+    cleaned = cleaned.replace(/^[\-*_]{3,}\s*$/gm, '');
+    
+    // Remove markdown blockquotes (> text)
+    cleaned = cleaned.replace(/^>\s+/gm, '');
+    
+    // Remove markdown list markers (-, *, +, 1.)
+    cleaned = cleaned.replace(/^[\s]*[-*+]\s+/gm, '');
+    cleaned = cleaned.replace(/^[\s]*\d+\.\s+/gm, '');
+    
+    return cleaned;
   }
 }
