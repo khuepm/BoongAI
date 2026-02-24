@@ -61,7 +61,88 @@ export class AutoInjector {
   }
 
   static async injectText(inputField: HTMLElement, text: string): Promise<void> {
-    // TODO: Insert AI response into input field
+    // Format the text with prefix and preserve line breaks
+    const formattedText = this.formatReply(text);
+
+    try {
+      // Method 1: Try clipboard API (most reliable for Facebook)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(formattedText);
+        
+        // Focus the input field
+        inputField.focus();
+        
+        // Trigger paste event
+        const pasteEvent = new ClipboardEvent('paste', {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: new DataTransfer()
+        });
+        
+        // Add text to clipboard data
+        pasteEvent.clipboardData?.setData('text/plain', formattedText);
+        inputField.dispatchEvent(pasteEvent);
+        
+        // Wait for paste to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } else {
+        // Fallback: Direct DOM manipulation
+        await this.injectTextDirectly(inputField, formattedText);
+      }
+
+      // Trigger React/Facebook events for compatibility
+      this.triggerInputEvents(inputField, formattedText);
+      
+    } catch (error) {
+      console.error('[BoongAI] Clipboard API failed, using direct injection:', error);
+      // Fallback to direct DOM manipulation
+      await this.injectTextDirectly(inputField, formattedText);
+      this.triggerInputEvents(inputField, formattedText);
+    }
+  }
+
+  private static async injectTextDirectly(inputField: HTMLElement, text: string): Promise<void> {
+    // Check if it's a contenteditable element (Facebook uses these)
+    if (inputField.isContentEditable) {
+      inputField.textContent = text;
+    } else if (inputField instanceof HTMLInputElement || inputField instanceof HTMLTextAreaElement) {
+      inputField.value = text;
+    } else {
+      // Try to find the actual input element within the container
+      const actualInput = inputField.querySelector('[contenteditable="true"]') as HTMLElement;
+      if (actualInput) {
+        actualInput.textContent = text;
+      } else {
+        throw new Error('Could not find editable element');
+      }
+    }
+  }
+
+  private static triggerInputEvents(inputField: HTMLElement, text: string): void {
+    // Trigger input event for React
+    const inputEvent = new InputEvent('input', {
+      bubbles: true,
+      cancelable: true,
+      data: text,
+      inputType: 'insertText'
+    });
+    inputField.dispatchEvent(inputEvent);
+
+    // Trigger change event
+    const changeEvent = new Event('change', {
+      bubbles: true,
+      cancelable: true
+    });
+    inputField.dispatchEvent(changeEvent);
+
+    // Trigger keydown event (some frameworks need this)
+    const keydownEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'a',
+      code: 'KeyA'
+    });
+    inputField.dispatchEvent(keydownEvent);
   }
 
   static async submitReply(inputField: HTMLElement): Promise<void> {
