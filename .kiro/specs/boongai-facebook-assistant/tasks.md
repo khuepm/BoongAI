@@ -55,7 +55,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Map provider-specific error responses to ValidationResult
     - _Requirements: 3.1, 3.2, 3.3_
   
-  - [~] 3.2 Implement connection indicator update logic
+  - [x] 3.2 Implement connection indicator update logic
     - Implement updateConnectionIndicator() to set green/red indicator
     - Implement getValidationError() to parse and format error messages
     - _Requirements: 3.2, 3.3, 3.4, 3.5_
