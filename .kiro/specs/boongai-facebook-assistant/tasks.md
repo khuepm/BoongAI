@@ -72,7 +72,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 6: Validation failure shows error message**
     - **Validates: Requirements 3.5**
 
-- [~] 4. Implement AI Communicator module
+- [x] 4. Implement AI Communicator module
   - [x] 4.1 Create AI provider configuration and request formatting
     - Define SUPPORTED_MODELS constant with models for each provider
     - Define provider-specific API endpoints and authentication methods
@@ -92,27 +92,27 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Return appropriate error messages for each error type
     - _Requirements: 9.4, 9.5, 9.6, 11.2_
   
-  - [ ] 4.4 Write property test for request prompt formatting
+  - [x] 4.4 Write property test for request prompt formatting
     - **Property 20: AI request includes both context and command**
     - **Validates: Requirements 9.2**
   
-  - [ ] 4.5 Write property test for timeout enforcement
+  - [x] 4.5 Write property test for timeout enforcement
     - **Property 21: API request timeout enforcement**
     - **Validates: Requirements 9.3, 9.4**
   
-  - [ ] 4.6 Write property test for error categorization
+  - [x] 4.6 Write property test for error categorization
     - **Property 22: Error categorization and messaging**
     - **Validates: Requirements 9.4, 9.5, 9.6, 11.2**
   
-  - [ ] 4.7 Write property test for response extraction
+  - [x] 4.7 Write property test for response extraction
     - **Property 23: Response text extraction**
     - **Validates: Requirements 9.7**
   
-  - [ ] 4.8 Write property test for provider-specific configuration
+  - [x] 4.8 Write property test for provider-specific configuration
     - **Property 35: Provider-specific API configuration**
     - **Validates: Requirements 13.4, 13.5**
 
-- [-] 5. Implement DOM Observer module
+- [x] 5. Implement DOM Observer module
   - [x] 5.1 Create MutationObserver setup and Facebook DOM monitoring
     - Implement initialize() to set up MutationObserver on Facebook page
     - Configure observer to monitor comment input fields and new comment sections
