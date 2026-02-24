@@ -41,13 +41,78 @@ const PROVIDER_AUTH: Record<AIProvider, ProviderAuth> = {
 
 export class AICommunicator {
   static async sendRequest(config: AIRequestConfig): Promise<AIResponse> {
-    // TODO: Implement actual API communication
-    return {
-      text: 'AI response placeholder',
-      provider: config.provider,
-      model: config.model,
-      timestamp: Date.now()
-    };
+    const maxRetries = 2;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+
+        try {
+          // Get provider-specific configuration
+          const url = this.getUrl(config.provider, config.model, config.apiKey);
+          const headers = this.getHeaders(config.provider, config.apiKey);
+          const body = this.getRequestBody(config.provider, config.prompt, config.model);
+
+          // Make API request
+          const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          // Handle non-OK responses
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API request failed: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+          }
+
+          // Parse response
+          const rawResponse = await response.json();
+          const text = this.parseResponse(rawResponse, config.provider);
+
+          return {
+            text,
+            provider: config.provider,
+            model: config.model,
+            timestamp: Date.now()
+          };
+        } catch (error) {
+          clearTimeout(timeoutId);
+          throw error;
+        }
+      } catch (error) {
+        lastError = error as Error;
+
+        // Check if it's an abort error (timeout)
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Don't retry on timeout
+          throw error;
+        }
+
+        // Check if it's an auth error (don't retry)
+        if (error instanceof Error && error.message.includes('401')) {
+          throw error;
+        }
+
+        // If this is the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw error;
+        }
+
+        // Exponential backoff: 2^attempt seconds
+        const backoffMs = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+
+    // This should never be reached, but TypeScript needs it
+    throw lastError || new Error('Request failed after retries');
   }
 
   static formatPrompt(userRequest: string, postContent: string): string {
@@ -55,15 +120,82 @@ export class AICommunicator {
   }
 
   static parseResponse(rawResponse: any, provider: AIProvider): string {
-    // TODO: Implement provider-specific response parsing
-    return rawResponse.text || '';
+    try {
+      switch (provider) {
+        case 'openai':
+          // OpenAI response format: { choices: [{ message: { content: "..." } }] }
+          if (rawResponse.choices && rawResponse.choices.length > 0) {
+            return rawResponse.choices[0].message?.content || '';
+          }
+          throw new Error('Invalid OpenAI response format');
+
+        case 'gemini':
+          // Gemini response format: { candidates: [{ content: { parts: [{ text: "..." }] } }] }
+          if (rawResponse.candidates && rawResponse.candidates.length > 0) {
+            const parts = rawResponse.candidates[0].content?.parts;
+            if (parts && parts.length > 0) {
+              return parts[0].text || '';
+            }
+          }
+          throw new Error('Invalid Gemini response format');
+
+        case 'claude':
+          // Claude response format: { content: [{ text: "..." }] }
+          if (rawResponse.content && rawResponse.content.length > 0) {
+            return rawResponse.content[0].text || '';
+          }
+          throw new Error('Invalid Claude response format');
+
+        default:
+          throw new Error(`Unsupported provider: ${provider}`);
+      }
+    } catch (error) {
+      console.error('Error parsing response:', error, rawResponse);
+      throw error;
+    }
   }
 
   static handleError(error: Error): ErrorMessage {
-    // TODO: Implement error categorization
+    // Check for timeout
+    if (error.name === 'AbortError') {
+      return {
+        type: 'timeout',
+        message: 'AI request timed out. Please try again.'
+      };
+    }
+
+    // Check for authentication errors
+    if (error.message.includes('401') || error.message.includes('403') || error.message.includes('Invalid API key')) {
+      return {
+        type: 'auth',
+        message: 'Invalid API key. Please check your configuration.',
+        details: error.message
+      };
+    }
+
+    // Check for rate limiting
+    if (error.message.includes('429') || error.message.includes('rate limit')) {
+      return {
+        type: 'rate_limit',
+        message: 'Rate limit exceeded. Please wait and try again.',
+        details: error.message
+      };
+    }
+
+    // Check for network errors
+    if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('NetworkError')) {
+      return {
+        type: 'network',
+        message: 'Network error. Please check your connection.',
+        details: error.message
+      };
+    }
+
+    // Unknown error
     return {
       type: 'unknown',
-      message: error.message
+      message: error.message,
+      details: error.stack
     };
   }
 
