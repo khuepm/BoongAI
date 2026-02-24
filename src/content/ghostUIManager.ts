@@ -100,22 +100,37 @@ export class GhostUIManager {
   private static findCommentElement(commentId: string): HTMLElement | null {
     // Try multiple strategies to find the comment element
     
-    // Strategy 1: Find by data attribute
-    let element = document.querySelector(`[data-comment-id="${commentId}"]`) as HTMLElement;
-    if (element) return element;
+    // Strategy 1: Find by data attribute (escape special characters for CSS selector)
+    try {
+      const escapedId = CSS.escape(commentId);
+      let element = document.querySelector(`[data-comment-id="${escapedId}"]`) as HTMLElement | null;
+      if (element) return element;
+    } catch (e) {
+      // If CSS.escape fails or selector is invalid, continue to next strategy
+    }
 
     // Strategy 2: Find by aria-label or other Facebook-specific attributes
-    element = document.querySelector(`[aria-label*="${commentId}"]`) as HTMLElement;
-    if (element) return element;
+    try {
+      const escapedId = CSS.escape(commentId);
+      let element = document.querySelector(`[aria-label*="${escapedId}"]`) as HTMLElement | null;
+      if (element) return element;
+    } catch (e) {
+      // Continue to next strategy
+    }
 
     // Strategy 3: Find by ID if commentId is a valid DOM ID
-    element = document.getElementById(commentId);
-    if (element) return element;
+    try {
+      const element = document.getElementById(commentId) as HTMLElement | null;
+      if (element) return element;
+    } catch (e) {
+      // Continue to next strategy
+    }
 
     // Strategy 4: Search for comment text content (fallback)
     // This is less reliable but can work in some cases
     const allComments = document.querySelectorAll('[role="article"]');
-    for (const comment of allComments) {
+    const commentsArray = Array.from(allComments);
+    for (const comment of commentsArray) {
       if (comment.getAttribute('data-boongai-comment-id') === commentId) {
         return comment as HTMLElement;
       }
