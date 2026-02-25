@@ -62,24 +62,27 @@
                     </div>
                 </div>
                 <div class="relative group">
-                    <input class="peer w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none text-base placeholder-transparent font-mono" id="apikey" placeholder=" " type="password" value=""/>
+                    <input class="peer w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 pr-24 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none text-base placeholder-transparent font-mono" id="apikey" placeholder=" " type="password" value=""/>
                     <label class="floating-label absolute left-3 transition-all duration-200 pointer-events-none font-normal z-10 px-1" for="apikey">
                         API Key
                     </label>
-                    <button id="toggle-password" class="absolute inset-y-0 right-0 flex items-center px-4 text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-dark-on-surface" type="button">
-                        <span id="toggle-password-icon" class="material-symbols-outlined text-[24px]">visibility</span>
-                    </button>
+                    <div class="absolute inset-y-0 right-0 flex items-center gap-2 px-3">
+                        <div id="connection-indicator" class="w-3 h-3 rounded-full bg-gray-400 dark:bg-gray-600 transition-colors duration-200" title="Not validated"></div>
+                        <button id="toggle-password" class="flex items-center text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-dark-on-surface" type="button">
+                            <span id="toggle-password-icon" class="material-symbols-outlined text-[24px]">visibility</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="p-6 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-4">
-            <button id="save-btn" class="w-full h-10 rounded-full bg-primary dark:bg-dark-primary text-on-primary dark:text-dark-on-primary font-medium text-sm tracking-wide shadow-m3-1 hover:shadow-m3-2 hover:bg-opacity-90 active:shadow-none transition-all flex items-center justify-center gap-2">
-                Save Changes
-            </button>
+        <div class="p-6 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-3">
             <div class="text-center">
-                <p class="text-[11px] font-medium tracking-wide text-on-surface-variant/80 dark:text-gray-500">
-                    Type <span class="text-primary dark:text-dark-primary font-bold">@BoongAI</span> [request] in comments
+                <p class="text-xs leading-relaxed text-on-surface-variant dark:text-gray-400 mb-2">
+                    Type <span class="text-primary dark:text-dark-primary font-bold">@BoongAI</span> [your request] in Facebook comments to activate the assistant.
                 </p>
+                <a href="#" id="api-guide-link" class="text-xs text-primary dark:text-dark-primary hover:underline">
+                    How to get an API key?
+                </a>
             </div>
         </div>
     </div>

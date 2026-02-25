@@ -4,18 +4,23 @@ import {
   ValidateApiKeyMessage, 
   AIRequestMessage,
   AIResponseMessage,
-  ValidationResultMessage
+  ValidationResultMessage,
+  ExtensionConfig
 } from '@/types';
+import { ConfigurationManager } from '@/utils/configurationManager';
+import { APIValidator } from '@/utils/apiValidator';
+import { AICommunicator } from '@/utils/aiCommunicator';
 
 console.log('BoongAI Background Service Worker initialized');
 
-// Message listener
+// Message listener for popup and content script communication
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Route messages to appropriate handlers
   if (message.type === 'CONFIG_UPDATE') {
     handleConfigUpdate(message as ConfigUpdateMessage, sendResponse);
     return true;
   }
-  
+
   if (message.type === 'VALIDATE_API_KEY') {
     handleValidateApiKey(message as ValidateApiKeyMessage, sendResponse);
     return true;
