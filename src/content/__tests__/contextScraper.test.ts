@@ -354,5 +354,64 @@ describe('ContextScraper', () => {
         );
       });
     });
+
+    describe('Property 44: See more DOM mutation wait', () => {
+      it('Feature: boongai-facebook-assistant, **Validates: Requirements 7.2**', async () => {
+        jest.useRealTimers();
+
+        await fc.assert(
+          fc.asyncProperty(
+            fc.string({ minLength: 1, maxLength: 50 }).filter(s => /^[a-zA-Z0-9_-]+$/.test(s)),
+            fc.string({ minLength: 1, maxLength: 200 }).filter(s => s.trim().length > 0),
+            fc.string({ minLength: 1, maxLength: 300 }).filter(s => s.trim().length > 0),
+            fc.integer({ min: 5, max: 100 }),
+            async (postId, initialContent, expandedText, mutationDelayMs) => {
+              // Clear DOM before each iteration
+              if (document && document.body) {
+                document.body.innerHTML = '';
+              }
+
+              // Setup: Create a post with a "See more" button
+              const postElement = createMockPost(postId, initialContent, true);
+              const seeMoreButton = postElement.querySelector('[role="button"]') as HTMLElement;
+              expect(seeMoreButton).toBeTruthy();
+
+              // Track whether the button was clicked and when mutation fires
+              let buttonClicked = false;
+              let mutationFired = false;
+
+              // Override click to simulate async DOM mutation after a random delay
+              // mutationDelayMs is always well under the 3s timeout, so the observer should catch it
+              jest.spyOn(seeMoreButton, 'click').mockImplementation(() => {
+                buttonClicked = true;
+                setTimeout(() => {
+                  const expandedDiv = document.createElement('div');
+                  expandedDiv.className = 'expanded-content';
+                  expandedDiv.textContent = expandedText;
+                  postElement.appendChild(expandedDiv);
+                  mutationFired = true;
+                }, mutationDelayMs);
+              });
+
+              // Action: Call expandSeeMore and wait for it to complete
+              const result = await ContextScraper.expandSeeMore(postElement);
+
+              // Verify: The button should have been clicked
+              expect(buttonClicked).toBe(true);
+
+              // Verify: expandSeeMore waited for the DOM mutation (delay < 3s timeout)
+              expect(mutationFired).toBe(true);
+              expect(result).toBe(true);
+
+              // Verify: The expanded text is available in the DOM after expandSeeMore returns
+              const expandedDiv = postElement.querySelector('.expanded-content');
+              expect(expandedDiv).toBeTruthy();
+              expect(expandedDiv!.textContent).toBe(expandedText);
+            }
+          ),
+          { numRuns: 20 }
+        );
+      }, 30000);
+    });
   });
 });

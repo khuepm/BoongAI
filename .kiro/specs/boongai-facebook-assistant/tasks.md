@@ -478,7 +478,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Only extract expanded text after DOM mutation is confirmed complete
     - _Requirements: 7.2_
   
-  - [-] 18.2 Write property test for See more DOM mutation wait
+  - [x] 18.2 Write property test for See more DOM mutation wait
     - **Property 44: See more DOM mutation wait**
     - **Validates: Requirements 7.2**
 
