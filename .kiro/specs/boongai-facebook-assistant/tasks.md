@@ -482,7 +482,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 44: See more DOM mutation wait**
     - **Validates: Requirements 7.2**
 
-- [ ] 19. Update Auto Injector for precise reply targeting and anti-spam humanization
+- [x] 19. Update Auto Injector for precise reply targeting and anti-spam humanization
   - [x] 19.1 Update findReplyButton() for precise DOM-structural targeting
     - Refactor findReplyButton() to use closest DOM relative traversal from the Command_Comment element
     - Ensure the reply button is strictly structurally bound to the original Command_Comment
@@ -504,7 +504,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Validates: Requirements 10.4, 10.6**
 
 - [ ] 20. Update Configuration Manager security note
-  - [~] 20.1 Add security context comment to encryption module
+  - [x] 20.1 Add security context comment to encryption module
     - Add code comment documenting that Chrome Storage is local-only and encryption is defense-in-depth
     - Ensure no functional changes to encryption logic
     - _Requirements: 14.4_

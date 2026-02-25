@@ -46,6 +46,13 @@ export class ConfigurationManager {
     });
   }
 
+  /**
+   * Security Context (Requirement 14.4):
+   * API_Key is stored in the user's local Chrome Storage, so the risk of
+   * external exposure is extremely low as long as the machine is not
+   * compromised by malware. This encryption is maintained as a
+   * defense-in-depth measure rather than a primary security boundary.
+   */
   static async encryptApiKey(apiKey: string): Promise<string> {
     try {
       // Generate a random salt
