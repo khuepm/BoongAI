@@ -5,6 +5,14 @@ describe('AutoInjector Property-Based Tests', () => {
   beforeEach(() => {
     // Clear DOM
     document.body.innerHTML = '';
+    // Mock humanization delay to speed up tests (avoid real 500-1500ms waits)
+    jest.spyOn(AutoInjector, 'generateHumanizationDelay').mockReturnValue(10);
+    // Mock pre-submit delay to speed up tests (avoid real 2-3s waits for 3-5s target)
+    jest.spyOn(AutoInjector, 'calculatePreSubmitDelay').mockReturnValue(0);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   // Helper function to create a mock comment element with reply button

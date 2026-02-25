@@ -1,7 +1,34 @@
 // Auto Injector Module
 export class AutoInjector {
+  /**
+   * Generate a randomized humanization delay between 500ms and 1500ms.
+   * Uses Math.random() to simulate natural human interaction timing.
+   */
+  static generateHumanizationDelay(): number {
+    return Math.floor(Math.random() * 1000) + 500;
+  }
+
+  /**
+   * Calculate the pre-submit delay needed to bring total auto-reply time
+   * into the 3-5 second range for natural human pacing.
+   * Returns 0 if enough time has already elapsed.
+   */
+  static calculatePreSubmitDelay(elapsedMs: number): number {
+    const targetMin = 3000; // minimum 3 seconds total
+    const targetMax = 5000; // maximum 5 seconds total
+    const submitDelay = 200; // base submit wait time
+    if (elapsedMs >= targetMin - submitDelay) {
+      return 0;
+    }
+    const remainingMin = targetMin - elapsedMs - submitDelay;
+    const remainingMax = Math.min(targetMax - elapsedMs - submitDelay, remainingMin + 1000);
+    return Math.floor(Math.random() * (remainingMax - remainingMin + 1)) + remainingMin;
+  }
+
   static async generateReply(commentId: string, aiResponse: string): Promise<boolean> {
     try {
+      const startTime = Date.now();
+
       // Step 1: Find reply button
       const replyButton = this.findReplyButton(commentId);
       if (!replyButton) {
@@ -12,20 +39,33 @@ export class AutoInjector {
       // Step 2: Click reply button to open input field
       await this.clickReplyButton(replyButton);
 
-      // Step 3: Find the reply input field
+      // Step 3: Randomized humanization delay (500ms - 1500ms) between opening input and injecting text
+      // Uses Math.random() to simulate natural human interaction and avoid Facebook bot detection
+      const humanDelay = this.generateHumanizationDelay();
+      await new Promise(resolve => setTimeout(resolve, humanDelay));
+
+      // Step 4: Find the reply input field
       const inputField = this.findReplyInputField(commentId);
       if (!inputField) {
         console.error('[BoongAI] Reply input field not found');
         return false;
       }
 
-      // Step 4: Inject AI response text
+      // Step 5: Inject AI response text
       await this.injectText(inputField, aiResponse);
 
-      // Step 5: Submit the reply
+      // Step 6: Pre-submit delay to bring total time into 3-5 second range for natural pacing
+      const elapsed = Date.now() - startTime;
+      const extraDelay = this.calculatePreSubmitDelay(elapsed);
+      if (extraDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, extraDelay));
+      }
+
+      // Step 7: Submit the reply
       await this.submitReply(inputField);
 
-      console.log('[BoongAI] Reply generated successfully');
+      const totalTime = Date.now() - startTime;
+      console.log(`[BoongAI] Reply generated successfully in ${totalTime}ms`);
       return true;
     } catch (error) {
       console.error('[BoongAI] Error generating reply:', error);
