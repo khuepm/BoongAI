@@ -168,7 +168,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
   
   - [x] 6.2 Implement "See more" expansion handling
     - Implement expandSeeMore() to detect and click "See more" button
-    - Wait for content expansion with retry mechanism (max 3 attempts)
+    - Wait for DOM mutation to complete (up to 3 seconds) before extracting expanded text
     - Verify complete content extraction
     - _Requirements: 6.3, 7.2_
   
@@ -234,7 +234,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
 
 - [x] 8. Implement Auto Injector module
   - [x] 8.1 Create reply button location and interaction
-    - Implement findReplyButton() to locate reply button for command comment
+    - Implement findReplyButton() to locate the specific reply button strictly structurally bound (closest relative in DOM tree) to the command comment
     - Implement clickReplyButton() to programmatically click reply button
     - Wait for reply input field to appear (100-200ms delays)
     - _Requirements: 10.1, 10.2_
@@ -244,6 +244,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Trigger input, change, and keydown events for React compatibility
     - Prefix all replies with "[🤖 BoongAI trả lời]: "
     - Preserve line breaks and formatting from AI response
+    - Incorporate randomized artificial delay (500ms - 1500ms) between opening input field and injecting text
     - _Requirements: 10.3, 10.4, 15.1, 15.2_
   
   - [x] 8.3 Implement content formatting and sanitization
@@ -254,7 +255,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
   
   - [x] 8.4 Implement reply submission
     - Implement submitReply() to simulate Enter key press or click submit button
-    - Complete auto-reply process within 2 seconds after receiving AI response
+    - Complete auto-reply process within 3 to 5 seconds after receiving AI response to simulate natural human interaction
     - Trigger Ghost UI removal on successful reply
     - _Requirements: 10.5, 10.6, 10.7_
   
@@ -448,6 +449,74 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
   - Verify all 15 requirements are satisfied
   - Ensure all tests pass, ask the user if questions arise
 
+- [ ] 17. Implement infinite loop prevention in DOM Observer
+  - [x] 17.1 Add auto-reply comment detection guard
+    - Implement isAutoReplyComment() to check if comment text begins with "[🤖 BoongAI trả lời]: " prefix
+    - Add guard in captureCommentSubmission() to skip comments that match the auto-reply prefix
+    - Ensure DOM_Observer does not trigger AI processing for auto-reply comments
+    - _Requirements: 5.6_
+  
+  - [~] 17.2 Add processed comment deduplication
+    - Maintain a Set<string> of processed comment IDs in DOM Observer
+    - Implement isAlreadyProcessed() to check if a Command_Comment has already been processed
+    - Add guard in captureCommentSubmission() to skip already-processed comments
+    - Ensure comment edits do not re-trigger AI processing
+    - _Requirements: 5.7_
+  
+  - [~] 17.3 Write property test for auto-reply comment ignored by trigger detection
+    - **Property 42: Auto-reply comment ignored by trigger detection**
+    - **Validates: Requirements 5.6**
+  
+  - [~] 17.4 Write property test for single processing per unique Command_Comment
+    - **Property 43: Single processing per unique Command_Comment**
+    - **Validates: Requirements 5.7**
+
+- [ ] 18. Update Context Scraper for async "See more" handling
+  - [~] 18.1 Update expandSeeMore() with DOM mutation wait
+    - Replace retry-based wait with MutationObserver-based wait for DOM mutation completion
+    - Set maximum wait timeout to 3 seconds after clicking "See more"
+    - Only extract expanded text after DOM mutation is confirmed complete
+    - _Requirements: 7.2_
+  
+  - [~] 18.2 Write property test for See more DOM mutation wait
+    - **Property 44: See more DOM mutation wait**
+    - **Validates: Requirements 7.2**
+
+- [ ] 19. Update Auto Injector for precise reply targeting and anti-spam humanization
+  - [~] 19.1 Update findReplyButton() for precise DOM-structural targeting
+    - Refactor findReplyButton() to use closest DOM relative traversal from the Command_Comment element
+    - Ensure the reply button is strictly structurally bound to the original Command_Comment
+    - Handle edge cases where multiple comments share similar DOM structures
+    - _Requirements: 10.1_
+  
+  - [~] 19.2 Add randomized humanization delay to text injection
+    - Add randomized delay (500ms - 1500ms) between opening the reply input field and injecting text
+    - Update overall timing to complete auto-reply within 3 to 5 seconds
+    - Use Math.random() for delay randomization to simulate natural human interaction
+    - _Requirements: 10.4, 10.6_
+  
+  - [~] 19.3 Write property test for precise reply button targeting
+    - **Property 45: Precise reply button targeting via DOM structure**
+    - **Validates: Requirements 10.1**
+  
+  - [~] 19.4 Write property test for anti-spam humanized delay
+    - **Property 46: Anti-spam humanized delay**
+    - **Validates: Requirements 10.4, 10.6**
+
+- [ ] 20. Update Configuration Manager security note
+  - [~] 20.1 Add security context comment to encryption module
+    - Add code comment documenting that Chrome Storage is local-only and encryption is defense-in-depth
+    - Ensure no functional changes to encryption logic
+    - _Requirements: 14.4_
+
+- [ ] 21. Final checkpoint - Verify all refinements
+  - Run complete test suite (unit + property + integration)
+  - Verify infinite loop prevention works correctly
+  - Verify "See more" async handling with DOM mutation wait
+  - Verify precise reply button targeting among multiple comments
+  - Verify anti-spam humanization delays
+  - Ensure all tests pass, ask the user if questions arise
+
 ## Notes
 
 - Tasks marked with `*` are optional property-based tests and can be skipped for faster MVP
@@ -458,3 +527,6 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
 - All AI responses are prefixed with "[🤖 BoongAI trả lời]: " for transparency
 - API keys are encrypted before storage for security
 - The extension supports three AI providers: OpenAI, Google Gemini, and Anthropic Claude
+- Infinite loop prevention ensures auto-reply comments and already-processed comments are not re-triggered
+- Anti-spam humanization delays simulate natural human interaction to avoid Facebook bot detection
+- Precise DOM-structural reply button targeting ensures correct comment threading among hundreds of comments

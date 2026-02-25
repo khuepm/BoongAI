@@ -169,6 +169,74 @@ describe('DOM Observer Module', () => {
       });
     });
 
+    describe('isAutoReplyComment', () => {
+      test('should return true for comments starting with auto-reply prefix', () => {
+        DOMObserver.initialize();
+        expect(DOMObserver.isAutoReplyComment('[🤖 BoongAI trả lời]: This is an AI response')).toBe(true);
+      });
+
+      test('should return true for prefix-only comment', () => {
+        DOMObserver.initialize();
+        expect(DOMObserver.isAutoReplyComment('[🤖 BoongAI trả lời]: ')).toBe(true);
+      });
+
+      test('should return false for regular comments', () => {
+        DOMObserver.initialize();
+        expect(DOMObserver.isAutoReplyComment('Hello @BoongAI please help')).toBe(false);
+      });
+
+      test('should return false for empty string', () => {
+        DOMObserver.initialize();
+        expect(DOMObserver.isAutoReplyComment('')).toBe(false);
+      });
+
+      test('should return false when prefix appears mid-text', () => {
+        DOMObserver.initialize();
+        expect(DOMObserver.isAutoReplyComment('Some text [🤖 BoongAI trả lời]: response')).toBe(false);
+      });
+    });
+
+    describe('captureCommentSubmission auto-reply guard', () => {
+      test('should return null for auto-reply comments', () => {
+        DOMObserver.initialize();
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-123');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '[🤖 BoongAI trả lời]: This is an AI response';
+        document.body.appendChild(comment);
+
+        const data = DOMObserver.captureCommentSubmission(comment);
+        expect(data).toBeNull();
+      });
+
+      test('should not trigger callback for auto-reply comments', () => {
+        const callback = jest.fn();
+        DOMObserver.initialize({ onCommentSubmitted: callback });
+        
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-123');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '[🤖 BoongAI trả lời]: AI generated reply';
+        document.body.appendChild(comment);
+
+        DOMObserver.captureCommentSubmission(comment);
+        expect(callback).not.toHaveBeenCalled();
+      });
+
+      test('should still capture regular comments with @BoongAI', () => {
+        DOMObserver.initialize();
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-123');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '@BoongAI please summarize this post';
+        document.body.appendChild(comment);
+
+        const data = DOMObserver.captureCommentSubmission(comment);
+        expect(data).toBeTruthy();
+        expect(data?.commentText).toContain('@BoongAI');
+      });
+    });
+
     describe('Editor framework support', () => {
       test('should extract text from Lexical editor', () => {
         DOMObserver.initialize();
