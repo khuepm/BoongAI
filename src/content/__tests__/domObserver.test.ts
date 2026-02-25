@@ -665,6 +665,118 @@ describe('DOM Observer Module', () => {
       });
     });
 
+    describe('Property 43: Single processing per unique Command_Comment', () => {
+      test('Feature: boongai-facebook-assistant, **Validates: Requirements 5.7**', () => {
+        fc.assert(
+          fc.property(
+            commentIdArbitrary(),
+            fc.string({ minLength: 5, maxLength: 20 }),
+            commentTextWithMentionArbitrary(),
+            fc.integer({ min: 2, max: 10 }),
+            (commentId, postId, commentText, repeatCount) => {
+              // Initialize observer with callback to track invocations
+              DOMObserver.cleanup();
+
+              let callbackCount = 0;
+              let lastCallbackData: CommentData | null = null;
+              DOMObserver.initialize({
+                onCommentSubmitted: (data) => {
+                  callbackCount++;
+                  lastCallbackData = data;
+                },
+              });
+
+              // Create comment element
+              const commentElement = document.createElement('div');
+              commentElement.setAttribute('data-comment-id', commentId);
+              commentElement.setAttribute('data-post-id', postId);
+              commentElement.textContent = commentText;
+              document.body.appendChild(commentElement);
+
+              // First call should succeed
+              const firstResult = DOMObserver.captureCommentSubmission(commentElement);
+              expect(firstResult).not.toBeNull();
+              expect(firstResult?.commentId).toBe(commentId);
+              expect(callbackCount).toBe(1);
+
+              // Subsequent calls with the same comment ID should return null
+              for (let i = 0; i < repeatCount; i++) {
+                const duplicateResult = DOMObserver.captureCommentSubmission(commentElement);
+                expect(duplicateResult).toBeNull();
+              }
+
+              // Callback should still have been triggered only once
+              expect(callbackCount).toBe(1);
+
+              // Cleanup
+              document.body.removeChild(commentElement);
+            }
+          ),
+          propertyTestConfig
+        );
+      });
+
+      test('Different comment IDs are processed independently', () => {
+        fc.assert(
+          fc.property(
+            fc.array(commentIdArbitrary(), { minLength: 2, maxLength: 10 }),
+            fc.string({ minLength: 5, maxLength: 20 }),
+            commentTextWithMentionArbitrary(),
+            (commentIds, postId, commentText) => {
+              // Ensure unique comment IDs
+              const uniqueIds = [...new Set(commentIds)];
+              if (uniqueIds.length < 2) return; // skip if not enough unique IDs
+
+              DOMObserver.cleanup();
+
+              let callbackCount = 0;
+              DOMObserver.initialize({
+                onCommentSubmitted: () => {
+                  callbackCount++;
+                },
+              });
+
+              // Each unique comment ID should be processed exactly once
+              for (const id of uniqueIds) {
+                const commentElement = document.createElement('div');
+                commentElement.setAttribute('data-comment-id', id);
+                commentElement.setAttribute('data-post-id', postId);
+                commentElement.textContent = commentText;
+                document.body.appendChild(commentElement);
+
+                const result = DOMObserver.captureCommentSubmission(commentElement);
+                expect(result).not.toBeNull();
+                expect(result?.commentId).toBe(id);
+
+                document.body.removeChild(commentElement);
+              }
+
+              // Callback count should equal number of unique IDs
+              expect(callbackCount).toBe(uniqueIds.length);
+
+              // Re-processing any of them should return null
+              for (const id of uniqueIds) {
+                const commentElement = document.createElement('div');
+                commentElement.setAttribute('data-comment-id', id);
+                commentElement.setAttribute('data-post-id', postId);
+                commentElement.textContent = commentText;
+                document.body.appendChild(commentElement);
+
+                const duplicateResult = DOMObserver.captureCommentSubmission(commentElement);
+                expect(duplicateResult).toBeNull();
+
+                document.body.removeChild(commentElement);
+              }
+
+              // Callback count should not have increased
+              expect(callbackCount).toBe(uniqueIds.length);
+            }
+          ),
+          propertyTestConfig
+        );
+      });
+    });
+
     describe('Property 34: Command comment detection', () => {
       test('Feature: boongai-facebook-assistant, **Validates: Requirements 12.3**', () => {
         fc.assert(
@@ -730,5 +842,12 @@ function autoReplyCommentArbitrary() {
   return fc.string({ minLength: 0, maxLength: 300 }).map(
     (suffix) => `[🤖 BoongAI trả lời]: ${suffix}`
   );
+}
+
+/**
+ * Generator for unique comment IDs (non-empty alphanumeric strings)
+ */
+function commentIdArbitrary() {
+  return fc.stringMatching(/^[a-zA-Z0-9_-]{5,20}$/);
 }
 
