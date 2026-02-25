@@ -316,27 +316,27 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 32: Error logging to console**
     - **Validates: Requirements 11.5**
 
-- [-] 10. Implement Background Service Worker
-  - [ ] 10.1 Create message routing and handler registration
+- [x] 10. Implement Background Service Worker
+  - [x] 10.1 Create message routing and handler registration
     - Set up message listeners for popup and content script communication
     - Implement message routing to appropriate handlers (config update, API request, validation)
     - Handle extension lifecycle events (install, update)
     - _Requirements: 14.1_
   
-  - [ ] 10.2 Integrate Configuration Manager and API Validator
+  - [x] 10.2 Integrate Configuration Manager and API Validator
     - Wire CONFIG_UPDATE messages to Configuration Manager
     - Wire VALIDATE_API_KEY messages to API Validator
     - Send validation results back to popup
     - _Requirements: 2.4, 3.1_
   
-  - [ ] 10.3 Integrate AI Communicator for request processing
+  - [x] 10.3 Integrate AI Communicator for request processing
     - Wire AI_REQUEST messages to AI Communicator
     - Load configuration for each request
     - Send AI_RESPONSE messages back to content script
     - Handle errors and send error responses
     - _Requirements: 9.1, 9.2_
 
-- [-] 11. Implement Popup UI
+- [~] 11. Implement Popup UI
   - [ ] 11.1 Create popup HTML structure and styling
     - Create popup.html with master switch, provider dropdown, model dropdown, API key input
     - Add connection indicator next to API key input
@@ -368,7 +368,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 7: Guide link opens new tab**
     - **Validates: Requirements 4.3**
 
-- [ ] 12. Implement Content Script orchestration
+- [~] 12. Implement Content Script orchestration
   - [ ] 12.1 Create content script initialization and module coordination
     - Initialize all modules (DOM Observer, Context Scraper, Auto Injector, Ghost UI Manager)
     - Set up message listener for background service worker communication
@@ -388,13 +388,13 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Clean up observers and event listeners when disabled
     - _Requirements: 1.2, 1.3, 1.5_
 
-- [ ] 13. Checkpoint - Ensure all tests pass
+- [~] 13. Checkpoint - Ensure all tests pass
   - Run all unit tests and verify passing
   - Run all property-based tests and verify passing
   - Test extension manually in Chrome with Facebook
   - Ensure all tests pass, ask the user if questions arise
 
-- [ ] 14. Create Chrome Extension manifest and build configuration
+- [~] 14. Create Chrome Extension manifest and build configuration
   - [ ] 14.1 Create manifest.json with all required configurations
     - Define manifest_version, name, version, description
     - Configure permissions: storage, activeTab, scripting
@@ -411,7 +411,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Create build script for production packaging
     - _Requirements: 14.1_
 
-- [ ] 15. Integration testing and bug fixes
+- [~] 15. Integration testing and bug fixes
   - [ ] 15.1 Test complete workflow on Facebook
     - Test mention detection and highlighting on real Facebook posts
     - Test comment submission capture and context extraction
@@ -442,7 +442,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Optimize performance if needed
     - Ensure compatibility with Facebook DOM changes
 
-- [ ] 16. Final checkpoint - Ensure all tests pass
+- [~] 16. Final checkpoint - Ensure all tests pass
   - Run complete test suite (unit + property + integration)
   - Verify extension works correctly on Facebook
   - Verify all 15 requirements are satisfied
