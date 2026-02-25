@@ -471,7 +471,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 43: Single processing per unique Command_Comment**
     - **Validates: Requirements 5.7**
 
-- [ ] 18. Update Context Scraper for async "See more" handling
+- [x] 18. Update Context Scraper for async "See more" handling
   - [x] 18.1 Update expandSeeMore() with DOM mutation wait
     - Replace retry-based wait with MutationObserver-based wait for DOM mutation completion
     - Set maximum wait timeout to 3 seconds after clicking "See more"
@@ -483,7 +483,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Validates: Requirements 7.2**
 
 - [ ] 19. Update Auto Injector for precise reply targeting and anti-spam humanization
-  - [~] 19.1 Update findReplyButton() for precise DOM-structural targeting
+  - [x] 19.1 Update findReplyButton() for precise DOM-structural targeting
     - Refactor findReplyButton() to use closest DOM relative traversal from the Command_Comment element
     - Ensure the reply button is strictly structurally bound to the original Command_Comment
     - Handle edge cases where multiple comments share similar DOM structures

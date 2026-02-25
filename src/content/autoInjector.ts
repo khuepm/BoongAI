@@ -67,44 +67,169 @@ export class AutoInjector {
   }
 
   static findReplyButton(commentId: string): HTMLElement | null {
-    // Find the comment element by data attribute
+    // Step 1: Find the comment element by data attribute
     const commentElement = document.querySelector(`[data-boongai-comment-id="${commentId}"]`);
     if (!commentElement) {
       console.error(`[BoongAI] Comment element not found for ID: ${commentId}`);
       return null;
     }
 
-    // Facebook uses various selectors for reply buttons
-    // Try multiple selectors to find the reply button
-    const selectors = [
+    // Facebook reply button selectors (English + Vietnamese)
+    const replyButtonSelectors = [
       'div[role="button"][aria-label*="Reply"]',
-      'div[role="button"][aria-label*="Trả lời"]', // Vietnamese
-      'span:contains("Reply")',
-      'span:contains("Trả lời")',
+      'div[role="button"][aria-label*="Trả lời"]',
       '[data-testid*="reply"]',
-      'a[href*="reply"]'
+      'a[href*="reply"]',
     ];
 
+    // Text-based matching patterns for reply buttons
+    const replyTextPatterns = [/^Reply$/i, /^Trả lời$/i];
+
+    // Step 2: Use closest DOM relative traversal from the comment element.
+    // Walk up through ancestors to find the tightest container that holds
+    // both the comment and its reply button, checking at each level.
+    // This ensures we pick the reply button structurally bound to THIS comment,
+    // not one belonging to a sibling or parent comment.
+
+    // Candidate container selectors, ordered from tightest to broadest scope
+    const containerSelectors = [
+      '[role="article"]',
+      '[data-testid*="comment"]',
+      'li',
+      '.comment',
+    ];
+
+    // First, try to find the reply button directly inside the comment element itself
+    const directMatch = this.findReplyButtonInContainer(commentElement, replyButtonSelectors, replyTextPatterns);
+    if (directMatch) {
+      return directMatch;
+    }
+
+    // Step 3: Walk up through ancestors using closest() for each container selector.
+    // At each level, verify the found button is the closest one to our comment element
+    // by ensuring no other comment element sits between the button and our comment.
+    for (const containerSelector of containerSelectors) {
+      const container = commentElement.closest(containerSelector);
+      if (!container) continue;
+
+      const candidate = this.findReplyButtonInContainer(container, replyButtonSelectors, replyTextPatterns);
+      if (candidate && this.isClosestReplyButton(candidate, commentElement, container)) {
+        return candidate;
+      }
+    }
+
+    // Step 4: Fallback — check immediate parent chain (up to 5 levels)
+    let current: Element | null = commentElement.parentElement;
+    for (let depth = 0; depth < 5 && current; depth++) {
+      const candidate = this.findReplyButtonInContainer(current, replyButtonSelectors, replyTextPatterns);
+      if (candidate && this.isClosestReplyButton(candidate, commentElement, current)) {
+        return candidate;
+      }
+      current = current.parentElement;
+    }
+
+    console.error(`[BoongAI] Reply button not found for comment: ${commentId}`);
+    return null;
+  }
+
+  /**
+   * Search for a reply button within a given container using selector-based
+   * and text-based matching strategies.
+   */
+  private static findReplyButtonInContainer(
+    container: Element,
+    selectors: string[],
+    textPatterns: RegExp[]
+  ): HTMLElement | null {
+    // Try CSS selectors first
     for (const selector of selectors) {
-      const button = commentElement.querySelector(selector) as HTMLElement;
+      const button = container.querySelector(selector) as HTMLElement;
       if (button) {
         return button;
       }
     }
 
-    // If not found in comment element, try finding in parent container
-    const parentContainer = commentElement.closest('[role="article"]');
-    if (parentContainer) {
-      for (const selector of selectors) {
-        const button = parentContainer.querySelector(selector) as HTMLElement;
-        if (button) {
-          return button;
+    // Fallback: text-based matching for spans/divs that contain "Reply" or "Trả lời"
+    const candidates = container.querySelectorAll('span, div[role="button"], a');
+    for (const candidate of Array.from(candidates)) {
+      const text = candidate.textContent?.trim() ?? '';
+      for (const pattern of textPatterns) {
+        if (pattern.test(text)) {
+          return candidate as HTMLElement;
         }
       }
     }
 
-    console.error(`[BoongAI] Reply button not found for comment: ${commentId}`);
     return null;
+  }
+
+  /**
+   * Verify that a candidate reply button is structurally closest to the target
+   * comment element within the given container. This prevents picking a reply
+   * button that belongs to a different comment when multiple comments share
+   * the same container.
+   */
+  private static isClosestReplyButton(
+    button: Element,
+    commentElement: Element,
+    container: Element
+  ): boolean {
+    // Find all comment elements within this container
+    const allComments = container.querySelectorAll('[data-boongai-comment-id]');
+    if (allComments.length <= 1) {
+      // Only one comment in this container — the button must belong to it
+      return true;
+    }
+
+    // If the button is inside a different comment element, it's not ours
+    for (const comment of Array.from(allComments)) {
+      if (comment !== commentElement && comment.contains(button)) {
+        return false;
+      }
+    }
+
+    // If the button is inside our comment element — ideal case
+    if (commentElement.contains(button)) {
+      return true;
+    }
+
+    // The button is outside all comment elements but within the container.
+    // Find the closest comment to the button by DOM tree distance.
+    let closestComment: Element | null = null;
+    let minDistance = Infinity;
+
+    for (const comment of Array.from(allComments)) {
+      const distance = this.domDistance(button, comment, container);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestComment = comment;
+      }
+    }
+
+    return closestComment === commentElement;
+  }
+
+  /**
+   * Calculate a simple DOM distance between two elements within a container.
+   * Uses document-order position via TreeWalker as a proxy for structural proximity.
+   */
+  private static domDistance(a: Element, b: Element, container: Element): number {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
+    let posA = -1;
+    let posB = -1;
+    let index = 0;
+
+    let node: Node | null = walker.currentNode;
+    while (node) {
+      if (node === a) posA = index;
+      if (node === b) posB = index;
+      if (posA >= 0 && posB >= 0) break;
+      node = walker.nextNode();
+      index++;
+    }
+
+    if (posA < 0 || posB < 0) return Infinity;
+    return Math.abs(posA - posB);
   }
 
   static async clickReplyButton(button: HTMLElement): Promise<void> {

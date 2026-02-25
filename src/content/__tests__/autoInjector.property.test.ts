@@ -47,6 +47,67 @@ describe('AutoInjector Property-Based Tests', () => {
         { numRuns: 20 }
       );
     });
+
+    it('should find the correct reply button among multiple comments in the same container', () => {
+      // Setup: Create a shared parent container with multiple comments
+      const sharedContainer = document.createElement('div');
+
+      const comment1 = document.createElement('div');
+      comment1.setAttribute('role', 'article');
+      comment1.setAttribute('data-boongai-comment-id', 'comment-A');
+      const reply1 = document.createElement('div');
+      reply1.setAttribute('role', 'button');
+      reply1.setAttribute('aria-label', 'Reply');
+      reply1.textContent = 'Reply-A';
+      comment1.appendChild(reply1);
+
+      const comment2 = document.createElement('div');
+      comment2.setAttribute('role', 'article');
+      comment2.setAttribute('data-boongai-comment-id', 'comment-B');
+      const reply2 = document.createElement('div');
+      reply2.setAttribute('role', 'button');
+      reply2.setAttribute('aria-label', 'Reply');
+      reply2.textContent = 'Reply-B';
+      comment2.appendChild(reply2);
+
+      sharedContainer.appendChild(comment1);
+      sharedContainer.appendChild(comment2);
+      document.body.appendChild(sharedContainer);
+
+      // Action & Verify: Each comment should find its own reply button
+      const foundReply1 = AutoInjector.findReplyButton('comment-A');
+      expect(foundReply1).toBe(reply1);
+      expect(foundReply1?.textContent).toBe('Reply-A');
+
+      const foundReply2 = AutoInjector.findReplyButton('comment-B');
+      expect(foundReply2).toBe(reply2);
+      expect(foundReply2?.textContent).toBe('Reply-B');
+
+      // Cleanup
+      document.body.innerHTML = '';
+    });
+
+    it('should return null when comment element does not exist', () => {
+      const result = AutoInjector.findReplyButton('nonexistent-id');
+      expect(result).toBeNull();
+    });
+
+    it('should find reply button via text-based matching (Vietnamese)', () => {
+      const commentElement = document.createElement('div');
+      commentElement.setAttribute('role', 'article');
+      commentElement.setAttribute('data-boongai-comment-id', 'vn-comment');
+
+      const replySpan = document.createElement('span');
+      replySpan.textContent = 'Trả lời';
+      commentElement.appendChild(replySpan);
+
+      document.body.appendChild(commentElement);
+
+      const found = AutoInjector.findReplyButton('vn-comment');
+      expect(found).toBe(replySpan);
+
+      document.body.innerHTML = '';
+    });
   });
 
   describe('Property 25: Reply button click opens input', () => {
