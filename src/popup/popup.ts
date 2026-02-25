@@ -3,15 +3,17 @@ import { ExtensionConfig, AIProvider, SUPPORTED_MODELS, ValidateApiKeyMessage, V
 import { ConfigurationManager } from '@/utils/configurationManager';
 
 class PopupUI {
-  private activeToggle: HTMLInputElement;
-  private providerSelect: HTMLSelectElement;
-  private modelSelect: HTMLSelectElement;
-  private apiKeyInput: HTMLInputElement;
-  private togglePasswordBtn: HTMLButtonElement;
-  private togglePasswordIcon: HTMLElement;
-  private connectionIndicator: HTMLElement;
-  private apiGuideLink: HTMLAnchorElement;
+  private activeToggle!: HTMLInputElement;
+  private providerSelect!: HTMLSelectElement;
+  private modelSelect!: HTMLSelectElement;
+  private apiKeyInput!: HTMLInputElement;
+  private togglePasswordBtn!: HTMLButtonElement;
+  private togglePasswordIcon!: HTMLElement;
+  private connectionIndicator!: HTMLElement;
+  private validationError!: HTMLElement;
+  private apiGuideLink!: HTMLAnchorElement;
   private currentConfig: ExtensionConfig | null = null;
+  private validationTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.activeToggle = document.getElementById('active-toggle') as HTMLInputElement;
@@ -21,85 +23,57 @@ class PopupUI {
     this.togglePasswordBtn = document.getElementById('toggle-password') as HTMLButtonElement;
     this.togglePasswordIcon = document.getElementById('toggle-password-icon') as HTMLElement;
     this.connectionIndicator = document.getElementById('connection-indicator') as HTMLElement;
+    this.validationError = document.getElementById('validation-error') as HTMLElement;
     this.apiGuideLink = document.getElementById('api-guide-link') as HTMLAnchorElement;
   }
 
   async initialize(): Promise<void> {
-    // Load configuration on popup open
     await this.loadConfiguration();
-    
-    // Set up event listeners
     this.setupEventListeners();
-    
-    // Update floating labels
     this.updateFloatingLabels();
   }
 
   private async loadConfiguration(): Promise<void> {
     this.currentConfig = await ConfigurationManager.loadConfig();
-    
-    // Update UI with loaded configuration
+
     this.activeToggle.checked = this.currentConfig.masterSwitch;
     this.providerSelect.value = this.currentConfig.aiProvider;
-    
+
     // Update model list for the selected provider
     this.updateModelList(this.currentConfig.aiProvider);
     this.modelSelect.value = this.currentConfig.model;
-    
-    // Decrypt and display API key if it exists
+
+    // Decrypt and display API key if stored
     if (this.currentConfig.apiKey) {
       try {
         const decryptedKey = await ConfigurationManager.decryptApiKey(this.currentConfig.apiKey);
         this.apiKeyInput.value = decryptedKey;
-      } catch (error) {
-        console.error('[BoongAI] Failed to decrypt API key:', error);
+      } catch {
         this.apiKeyInput.value = '';
       }
     }
-    
-    // Update connection indicator based on last validation
+
+    // Show green indicator if validation is still fresh (< 1 hour)
     if (this.currentConfig.lastValidated > 0) {
-      const timeSinceValidation = Date.now() - this.currentConfig.lastValidated;
-      // Consider validation valid for 1 hour (3600000 ms)
-      if (timeSinceValidation < 3600000) {
+      const age = Date.now() - this.currentConfig.lastValidated;
+      if (age < 3_600_000) {
         this.updateConnectionIndicator(true);
       }
     }
   }
 
   private setupEventListeners(): void {
-    // Master switch toggle
-    this.activeToggle.addEventListener('change', () => {
-      this.handleMasterSwitchToggle();
-    });
-    
-    // AI provider selection
-    this.providerSelect.addEventListener('change', () => {
-      this.handleProviderSelection();
-    });
-    
-    // Model selection
-    this.modelSelect.addEventListener('change', () => {
-      this.handleModelSelection();
-    });
-    
-    // API key input
-    this.apiKeyInput.addEventListener('input', () => {
-      this.handleApiKeyInput();
-    });
-    
-    // Password visibility toggle
-    this.togglePasswordBtn.addEventListener('click', () => {
-      this.togglePasswordVisibility();
-    });
-    
-    // API guide link
+    this.activeToggle.addEventListener('change', () => this.handleMasterSwitchToggle());
+    this.providerSelect.addEventListener('change', () => this.handleProviderSelection());
+    this.modelSelect.addEventListener('change', () => this.handleModelSelection());
+    this.apiKeyInput.addEventListener('input', () => this.handleApiKeyInput());
+    this.togglePasswordBtn.addEventListener('click', () => this.togglePasswordVisibility());
     this.apiGuideLink.addEventListener('click', (e) => {
       e.preventDefault();
       this.handleGuideLink();
     });
-    
-    // Update floating labels on input
+
+    // Keep floating labels in sync
     [this.providerSelect, this.modelSelect, this.apiKeyInput].forEach(el => {
       el.addEventListener('input', () => this.updateFloatingLabels());
       el.addEventListener('change', () => this.updateFloatingLabels());
@@ -109,7 +83,6 @@ class PopupUI {
   private async handleMasterSwitchToggle(): Promise<void> {
     const newState = this.activeToggle.checked;
     await ConfigurationManager.saveConfig({ masterSwitch: newState });
-    
     if (this.currentConfig) {
       this.currentConfig.masterSwitch = newState;
     }
@@ -117,41 +90,29 @@ class PopupUI {
 
   private handleProviderSelection(): void {
     const provider = this.providerSelect.value as AIProvider;
-    
-    // Update model list within 100ms (requirement 2.5)
-    const startTime = performance.now();
     this.updateModelList(provider);
-    const endTime = performance.now();
-    
-    console.log(`[BoongAI] Model list updated in ${endTime - startTime}ms`);
-    
-    // Save provider selection
     this.saveConfiguration({ aiProvider: provider, model: this.modelSelect.value });
+
+    // Reset validation state when provider changes
+    this.updateConnectionIndicator(null);
+    this.hideValidationError();
   }
 
   private handleModelSelection(): void {
-    const model = this.modelSelect.value;
-    this.saveConfiguration({ model });
+    this.saveConfiguration({ model: this.modelSelect.value });
   }
 
   private handleApiKeyInput(): void {
     const apiKey = this.apiKeyInput.value.trim();
-    
-    // Reset connection indicator while typing
     this.updateConnectionIndicator(null);
-    
-    // Trigger validation after user stops typing (debounce)
+    this.hideValidationError();
     this.debounceValidation(apiKey);
   }
 
-  private validationTimer: NodeJS.Timeout | null = null;
-  
   private debounceValidation(apiKey: string): void {
     if (this.validationTimer) {
       clearTimeout(this.validationTimer);
     }
-    
-    // Wait 500ms after user stops typing before validating
     this.validationTimer = setTimeout(() => {
       if (apiKey.length > 0) {
         this.validateApiKey(apiKey);
@@ -161,86 +122,77 @@ class PopupUI {
 
   private async validateApiKey(apiKey: string): Promise<void> {
     const provider = this.providerSelect.value as AIProvider;
-    
-    // Send validation request to background service worker
     const message: ValidateApiKeyMessage = {
       type: 'VALIDATE_API_KEY',
       provider,
       apiKey
     };
-    
+
     try {
       const response = await chrome.runtime.sendMessage(message) as ValidationResultMessage;
-      
-      // Update connection indicator based on validation result
       this.updateConnectionIndicator(response.isValid);
-      
+
       if (response.isValid) {
-        // Encrypt and save API key
+        this.hideValidationError();
         const encryptedKey = await ConfigurationManager.encryptApiKey(apiKey);
-        await this.saveConfiguration({ 
-          apiKey: encryptedKey,
-          lastValidated: Date.now()
-        });
+        await this.saveConfiguration({ apiKey: encryptedKey, lastValidated: Date.now() });
       } else {
-        // Show error message in console
-        console.error('[BoongAI] API key validation failed:', response.error);
+        this.showValidationError(response.error || 'API key validation failed.');
       }
     } catch (error) {
-      console.error('[BoongAI] Validation request failed:', error);
       this.updateConnectionIndicator(false);
+      this.showValidationError('Could not validate API key. Please try again.');
     }
   }
 
-  private updateConnectionIndicator(isValid: boolean | null): void {
+  updateConnectionIndicator(isValid: boolean | null): void {
     if (isValid === true) {
-      // Green indicator for valid API key
       this.connectionIndicator.className = 'w-3 h-3 rounded-full bg-green-600 dark:bg-green-500 transition-colors duration-200';
       this.connectionIndicator.title = 'API key is valid';
     } else if (isValid === false) {
-      // Red indicator for invalid API key
       this.connectionIndicator.className = 'w-3 h-3 rounded-full bg-red-600 dark:bg-red-500 transition-colors duration-200';
       this.connectionIndicator.title = 'API key is invalid';
     } else {
-      // Gray indicator for not validated
       this.connectionIndicator.className = 'w-3 h-3 rounded-full bg-gray-400 dark:bg-gray-600 transition-colors duration-200';
       this.connectionIndicator.title = 'Not validated';
     }
   }
 
-  private updateModelList(provider: AIProvider): void {
-    // Clear existing options
+  private showValidationError(message: string): void {
+    if (this.validationError) {
+      this.validationError.textContent = message;
+      this.validationError.classList.remove('hidden');
+    }
+  }
+
+  private hideValidationError(): void {
+    if (this.validationError) {
+      this.validationError.textContent = '';
+      this.validationError.classList.add('hidden');
+    }
+  }
+
+  updateModelList(provider: AIProvider): void {
     this.modelSelect.innerHTML = '';
-    
-    // Get models for the selected provider
     const models = SUPPORTED_MODELS[provider];
-    
-    // Add options for each model
     models.forEach(model => {
       const option = document.createElement('option');
       option.value = model;
       option.textContent = this.formatModelName(model);
       this.modelSelect.appendChild(option);
     });
-    
-    // Select the first model by default
     if (models.length > 0) {
       this.modelSelect.value = models[0];
     }
   }
 
   private formatModelName(model: string): string {
-    // Format model names for display
     if (model.startsWith('gpt-')) {
       return model.toUpperCase().replace('GPT-', 'GPT-');
     } else if (model.startsWith('gemini-')) {
-      return model.split('-').map(part => 
-        part.charAt(0).toUpperCase() + part.slice(1)
-      ).join(' ');
+      return model.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
     } else if (model.startsWith('claude-')) {
-      return model.split('-').slice(0, 3).map(part => 
-        part.charAt(0).toUpperCase() + part.slice(1)
-      ).join(' ');
+      return model.split('-').slice(0, 3).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
     }
     return model;
   }
@@ -256,17 +208,13 @@ class PopupUI {
   }
 
   private handleGuideLink(): void {
-    // Open API key guide in a new tab
     const guideUrls: Record<AIProvider, string> = {
       openai: 'https://platform.openai.com/api-keys',
       gemini: 'https://makersuite.google.com/app/apikey',
       claude: 'https://console.anthropic.com/settings/keys'
     };
-    
     const provider = this.providerSelect.value as AIProvider;
-    const guideUrl = guideUrls[provider];
-    
-    chrome.tabs.create({ url: guideUrl });
+    chrome.tabs.create({ url: guideUrls[provider] });
   }
 
   private updateFloatingLabels(): void {
@@ -281,8 +229,6 @@ class PopupUI {
 
   private async saveConfiguration(updates: Partial<ExtensionConfig>): Promise<void> {
     await ConfigurationManager.saveConfig(updates);
-    
-    // Update current config
     if (this.currentConfig) {
       Object.assign(this.currentConfig, updates);
     }
@@ -295,3 +241,4 @@ document.addEventListener('DOMContentLoaded', () => {
   popup.initialize();
 });
 
+export { PopupUI };
