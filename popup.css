@@ -1225,3 +1225,18 @@ body {
 .h-3 {
   height: 0.75rem;
 }
+
+/* Validation error message */
+.text-red-600 {
+  --tw-text-opacity: 1;
+  color: rgb(220 38 38 / var(--tw-text-opacity));
+}
+
+:is(.dark .dark\:text-red-400) {
+  --tw-text-opacity: 1;
+  color: rgb(248 113 113 / var(--tw-text-opacity));
+}
+
+.mt-1 {
+  margin-top: 0.25rem;
+}

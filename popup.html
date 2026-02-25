@@ -38,8 +38,8 @@
                 <div class="relative group">
                     <select class="peer has-value w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 pt-1 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none appearance-none cursor-pointer text-base" id="provider">
                         <option value="openai">OpenAI</option>
-                        <option value="anthropic">Anthropic</option>
-                        <option value="gemini">Gemini</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="claude">Anthropic Claude</option>
                     </select>
                     <label class="floating-label absolute left-3 transition-all duration-200 pointer-events-none font-normal z-10 px-1" for="provider">
                         AI Provider
@@ -50,9 +50,9 @@
                 </div>
                 <div class="relative group">
                     <select class="peer has-value w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 pt-1 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none appearance-none cursor-pointer text-base" id="model">
-                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-4">GPT-4</option>
                         <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                        <option value="gpt-3.5">GPT-3.5</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                     </select>
                     <label class="floating-label absolute left-3 transition-all duration-200 pointer-events-none font-normal z-10 px-1" for="model">
                         AI Model
@@ -68,11 +68,12 @@
                     </label>
                     <div class="absolute inset-y-0 right-0 flex items-center gap-2 px-3">
                         <div id="connection-indicator" class="w-3 h-3 rounded-full bg-gray-400 dark:bg-gray-600 transition-colors duration-200" title="Not validated"></div>
-                        <button id="toggle-password" class="flex items-center text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-dark-on-surface" type="button">
+                        <button id="toggle-password" class="flex items-center text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-dark-on-surface" type="button" aria-label="Toggle API key visibility">
                             <span id="toggle-password-icon" class="material-symbols-outlined text-[24px]">visibility</span>
                         </button>
                     </div>
                 </div>
+                <p id="validation-error" class="text-xs text-red-600 dark:text-red-400 mt-1 hidden" role="alert"></p>
             </div>
         </div>
         <div class="p-6 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-3">
