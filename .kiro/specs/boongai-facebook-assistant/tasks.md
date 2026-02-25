@@ -463,7 +463,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Ensure comment edits do not re-trigger AI processing
     - _Requirements: 5.7_
   
-  - [-] 17.3 Write property test for auto-reply comment ignored by trigger detection
+  - [x] 17.3 Write property test for auto-reply comment ignored by trigger detection
     - **Property 42: Auto-reply comment ignored by trigger detection**
     - **Validates: Requirements 5.6**
   

@@ -622,6 +622,49 @@ describe('DOM Observer Module', () => {
       });
     });
 
+    describe('Property 42: Auto-reply comment ignored by trigger detection', () => {
+      test('Feature: boongai-facebook-assistant, **Validates: Requirements 5.6**', () => {
+        fc.assert(
+          fc.property(
+            autoReplyCommentArbitrary(),
+            fc.string({ minLength: 5, maxLength: 20 }),
+            fc.string({ minLength: 5, maxLength: 20 }),
+            (autoReplyText, commentId, postId) => {
+              // Initialize observer with callback to track if it fires
+              DOMObserver.cleanup();
+
+              let callbackTriggered = false;
+              DOMObserver.initialize({
+                onCommentSubmitted: () => {
+                  callbackTriggered = true;
+                },
+              });
+
+              // Create comment element with auto-reply prefix text
+              const commentElement = document.createElement('div');
+              commentElement.setAttribute('data-comment-id', commentId);
+              commentElement.setAttribute('data-post-id', postId);
+              commentElement.textContent = autoReplyText;
+              document.body.appendChild(commentElement);
+
+              // Attempt to capture submission — should be ignored
+              const result = DOMObserver.captureCommentSubmission(commentElement);
+
+              // Verify: captureCommentSubmission returns null for auto-reply comments
+              expect(result).toBeNull();
+
+              // Verify: onCommentSubmitted callback is NOT triggered
+              expect(callbackTriggered).toBe(false);
+
+              // Cleanup
+              document.body.removeChild(commentElement);
+            }
+          ),
+          propertyTestConfig
+        );
+      });
+    });
+
     describe('Property 34: Command comment detection', () => {
       test('Feature: boongai-facebook-assistant, **Validates: Requirements 12.3**', () => {
         fc.assert(
@@ -679,3 +722,13 @@ function commentTextWithMentionArbitrary() {
     fc.string({ minLength: 1, maxLength: 200 })
   ).map(([prefix, mention, suffix]) => `${prefix}${mention} ${suffix}`.trim());
 }
+
+/**
+ * Generator for auto-reply comment text starting with "[🤖 BoongAI trả lời]: " prefix
+ */
+function autoReplyCommentArbitrary() {
+  return fc.string({ minLength: 0, maxLength: 300 }).map(
+    (suffix) => `[🤖 BoongAI trả lời]: ${suffix}`
+  );
+}
+
