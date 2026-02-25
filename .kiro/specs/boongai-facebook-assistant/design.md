@@ -155,6 +155,8 @@ sequenceDiagram
 - `detectMentionTrigger(inputElement)`: Monitor keyboard input for @BoongAI pattern
 - `highlightMention(textNode)`: Apply blue gradient styling to detected mention
 - `captureCommentSubmission(commentElement)`: Detect when user submits command comment
+- `isAutoReplyComment(commentText)`: Check if comment starts with "[🤖 BoongAI trả lời]: " prefix
+- `isAlreadyProcessed(commentId)`: Check if a Command_Comment has already been processed
 - `cleanup()`: Remove observers when master switch is disabled
 
 **Implementation Details**:
@@ -163,6 +165,8 @@ sequenceDiagram
 - Regex pattern: `/@BoongAI\b/gi` for mention detection
 - Event delegation for performance optimization
 - Debouncing for input events (50ms threshold)
+- Ignores comments that begin with "[🤖 BoongAI trả lời]: " to prevent infinite auto-reply loops
+- Maintains a Set of processed comment IDs to ensure each Command_Comment triggers AI processing only once (prevents re-triggering on edits)
 
 **Interface**:
 ```typescript
@@ -171,6 +175,8 @@ interface DOMObserver {
   detectMentionTrigger(inputElement: HTMLElement): boolean;
   highlightMention(textNode: Node): void;
   captureCommentSubmission(commentElement: HTMLElement): CommentData;
+  isAutoReplyComment(commentText: string): boolean;
+  isAlreadyProcessed(commentId: string): boolean;
   cleanup(): void;
 }
 
@@ -189,14 +195,14 @@ interface CommentData {
 **Key Functions**:
 - `extractPostContent(postId)`: Main extraction function
 - `findPostContainer(postId)`: Locate post DOM element
-- `expandSeeMore(postElement)`: Click "See more" button if present
+- `expandSeeMore(postElement)`: Click "See more" button and wait for DOM mutation to complete (up to 3 seconds)
 - `extractTextContent(postElement)`: Get all visible text
 - `filterUIElements(textContent)`: Remove like counts, timestamps, etc.
 
 **Implementation Details**:
 - Traverses DOM tree using Facebook-specific selectors
 - Handles dynamic content loading with retry mechanism (max 3 attempts)
-- Waits for "See more" expansion (up to 2 seconds timeout)
+- Waits for "See more" expansion by observing DOM mutations (up to 3 seconds timeout)
 - Excludes UI elements using CSS selector filters
 - Returns sanitized plain text content
 
@@ -291,7 +297,7 @@ interface ErrorMessage {
 
 **Key Functions**:
 - `generateReply(commentId, aiResponse)`: Main reply generation function
-- `findReplyButton(commentId)`: Locate reply button for command comment
+- `findReplyButton(commentId)`: Locate the specific reply button strictly structurally bound (closest relative in DOM tree) to the command comment
 - `clickReplyButton(button)`: Programmatically click reply button
 - `injectText(inputField, text)`: Insert AI response into input field
 - `submitReply(inputField)`: Submit the reply
@@ -300,9 +306,11 @@ interface ErrorMessage {
 - Simulates native browser events to bypass Facebook protections
 - Uses clipboard API for text injection (fallback to direct DOM manipulation)
 - Triggers input, change, and keydown events for React compatibility
-- Waits for DOM updates between actions (100-200ms delays)
+- Incorporates randomized artificial delay (500ms - 1500ms) between opening the input field and injecting text to simulate human behavior
 - Prefixes all replies with "[🤖 BoongAI trả lời]: "
 - Handles both Enter key submission and button click submission
+- Completes entire auto-reply process within 3 to 5 seconds to simulate natural human interaction speeds
+- Locates reply button using closest DOM relative traversal to ensure precise targeting among hundreds of comments
 
 **Interface**:
 ```typescript
@@ -314,6 +322,8 @@ interface AutoInjector {
   submitReply(inputField: HTMLElement): Promise<void>;
 }
 ```
+
+> **Security Note on API Key Encryption (Requirement 14):** API_Key is stored in the user's local Chrome Storage, so the risk of external exposure is extremely low as long as the machine is not compromised by malware. The encryption requirement is maintained as a defense-in-depth measure rather than a primary security boundary.
 
 ### 5. Ghost UI Manager Module
 
@@ -831,6 +841,36 @@ After analyzing all acceptance criteria, I identified the following redundancies
 *For any* AI response, malicious scripts or HTML injection attempts should be removed before creating the auto-reply.
 
 **Validates: Requirements 15.5**
+
+### Property 42: Auto-reply comment ignored by trigger detection
+
+*For any* comment text that begins with the prefix "[🤖 BoongAI trả lời]: ", the DOM Observer should ignore it and NOT trigger AI processing, preventing infinite auto-reply loops.
+
+**Validates: Requirements 5.6**
+
+### Property 43: Single processing per unique Command_Comment
+
+*For any* unique Command_Comment, the extension should trigger AI processing only once, even if the comment is edited or the DOM mutation fires multiple times.
+
+**Validates: Requirements 5.7**
+
+### Property 44: See more DOM mutation wait
+
+*For any* post containing a "See more" button, after clicking the button, the Context Scraper should wait for the DOM mutation to complete (up to 3 seconds) before extracting the expanded text.
+
+**Validates: Requirements 7.2**
+
+### Property 45: Precise reply button targeting via DOM structure
+
+*For any* Command_Comment in a post with multiple comments, the Auto Injector should locate the reply button that is strictly structurally bound (closest relative in the DOM tree) to the original Command_Comment.
+
+**Validates: Requirements 10.1**
+
+### Property 46: Anti-spam humanized delay
+
+*For any* auto-reply sequence, the Auto Injector should incorporate a randomized artificial delay (500ms - 1500ms) between opening the input field and injecting text, and complete the entire process within 3 to 5 seconds.
+
+**Validates: Requirements 10.4, 10.6**
 
 
 ## Error Handling
@@ -1390,7 +1430,7 @@ E2E tests verify complete user workflows:
 ### Test Coverage Goals
 
 - Unit Test Coverage: 80% minimum
-- Property Test Coverage: All 41 correctness properties
+- Property Test Coverage: All 46 correctness properties
 - Integration Test Coverage: All module interactions
 - E2E Test Coverage: All critical user workflows
 

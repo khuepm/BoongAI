@@ -456,7 +456,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Ensure DOM_Observer does not trigger AI processing for auto-reply comments
     - _Requirements: 5.6_
   
-  - [~] 17.2 Add processed comment deduplication
+  - [-] 17.2 Add processed comment deduplication
     - Maintain a Set<string> of processed comment IDs in DOM Observer
     - Implement isAlreadyProcessed() to check if a Command_Comment has already been processed
     - Add guard in captureCommentSubmission() to skip already-processed comments

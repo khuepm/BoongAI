@@ -82,6 +82,8 @@ BoongAI Facebook Assistant là một Chrome Extension cho phép người dùng t
 3. THE Extension SHALL use regex pattern matching to detect Mention_Trigger accurately
 4. THE Extension SHALL detect Mention_Trigger in Lexical and Draft.js editor frameworks used by Facebook
 5. WHEN Mention_Trigger is detected, THE Extension SHALL maintain the highlight until User submits or deletes the comment
+6. THE Extension SHALL ignore and NOT trigger on any comment text that begins with the prefix "[🤖 BoongAI trả lời]: " to prevent infinite auto-reply loops
+7. THE Extension SHALL ensure each unique Command_Comment triggers the AI processing only once, even if the user edits the comment later
 
 ### Requirement 6: Command Submission Capture
 
@@ -102,7 +104,7 @@ BoongAI Facebook Assistant là một Chrome Extension cho phép người dùng t
 #### Acceptance Criteria
 
 1. WHEN extracting Post_Content, THE Context_Scraper SHALL traverse the DOM tree to locate the post container
-2. IF Post_Content contains a "See more" button, THEN THE Context_Scraper SHALL programmatically click the button to expand full content
+2. IF Post_Content contains a "See more" button, THEN THE Context_Scraper SHALL programmatically click the button and wait for the DOM mutation to complete (up to 3 seconds) before extracting the expanded text
 3. THE Context_Scraper SHALL extract all visible text content from the post within 2 seconds
 4. THE Context_Scraper SHALL exclude UI elements such as like counts, share buttons, and timestamps from Post_Content
 5. IF Context_Scraper fails to extract Post_Content, THEN THE Extension SHALL display an error message in Ghost_UI
@@ -139,12 +141,12 @@ BoongAI Facebook Assistant là một Chrome Extension cho phép người dùng t
 
 #### Acceptance Criteria
 
-1. WHEN AI_Communicator receives successful response, THE Auto_Injector SHALL locate the reply button for the Command_Comment
+1. WHEN AI_Communicator receives successful response, THE Auto_Injector SHALL locate the specific reply button that is strictly structurally bound (closest relative in the DOM tree) to the original Command_Comment
 2. THE Auto_Injector SHALL programmatically click the reply button to open the reply input field
 3. THE Auto_Injector SHALL inject the AI response text prefixed with "[🤖 BoongAI trả lời]: " into the reply input field
-4. THE Auto_Injector SHALL simulate clipboard and input events to bypass Facebook input field protections
+4. THE Auto_Injector SHALL simulate clipboard and input events to bypass Facebook input field protections, incorporating a randomized artificial delay (e.g., 500ms - 1500ms) between opening the input field and injecting text
 5. THE Auto_Injector SHALL programmatically submit the reply by simulating Enter key press or clicking the submit button
-6. THE Auto_Injector SHALL complete the entire Auto_Reply process within 2 seconds after receiving AI response
+6. THE Auto_Injector SHALL complete the entire Auto_Reply process within 3 to 5 seconds after receiving AI response to simulate natural human interaction speeds
 7. WHEN Auto_Reply is successfully posted, THE Extension SHALL remove Ghost_UI
 
 ### Requirement 11: Error Handling Display
@@ -194,6 +196,8 @@ BoongAI Facebook Assistant là một Chrome Extension cho phép người dùng t
 3. WHEN Extension initializes, THE Extension SHALL load all saved configuration settings
 4. THE Extension SHALL encrypt API_Key before storing in Chrome Storage
 5. IF stored configuration is corrupted, THEN THE Extension SHALL reset to default configuration values
+
+> **Note:** API_Key is stored in the user's local Chrome Storage, so the risk of external exposure is extremely low as long as the machine is not compromised by malware. The encryption requirement (14.4) is maintained as a defense-in-depth measure rather than a primary security boundary.
 
 ### Requirement 15: Reply Content Formatting
 
