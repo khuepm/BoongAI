@@ -2,8 +2,7 @@
 import { PostContent } from '@/types';
 
 export class ContextScraper {
-  private static readonly MAX_RETRY_ATTEMPTS = 3;
-  private static readonly RETRY_DELAY = 500; // 500ms
+  private static readonly SEE_MORE_TIMEOUT = 3000; // 3 seconds max wait for DOM mutation
 
   /**
    * Extract complete post content from Facebook DOM
@@ -105,7 +104,8 @@ export class ContextScraper {
   }
 
   /**
-   * Detect and click "See more" button to expand full content
+   * Detect and click "See more" button to expand full content.
+   * Uses MutationObserver to wait for DOM mutation completion (up to 3 seconds).
    */
   static async expandSeeMore(postElement: HTMLElement): Promise<boolean> {
     const seeMoreButton = this.findSeeMoreButton(postElement);
@@ -114,25 +114,55 @@ export class ContextScraper {
       return true; // No "See more" button, content is already complete
     }
 
-    // Click the button
     try {
-      for (let attempt = 0; attempt < this.MAX_RETRY_ATTEMPTS; attempt++) {
-        seeMoreButton.click();
-        
-        // Wait for content to expand
-        await this.delay(this.RETRY_DELAY);
-        
-        // Check if button is gone (content expanded)
-        if (!this.findSeeMoreButton(postElement)) {
-          return true;
-        }
-      }
-      
-      return false; // Failed to expand after max attempts
+      // Set up MutationObserver before clicking to catch the DOM mutation
+      const mutationComplete = this.waitForDOMMutation(postElement);
+
+      // Click the "See more" button
+      seeMoreButton.click();
+
+      // Wait for DOM mutation to complete (or timeout after 3 seconds)
+      const mutated = await mutationComplete;
+
+      return mutated;
     } catch (error) {
       console.error('[ContextScraper] Failed to expand "See more":', error);
       return false;
     }
+  }
+
+  /**
+   * Wait for DOM mutation on the post element using MutationObserver.
+   * Resolves true when mutation is detected, false on timeout.
+   * Maximum wait: 3 seconds.
+   */
+  private static waitForDOMMutation(postElement: HTMLElement): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      let resolved = false;
+
+      const observer = new MutationObserver(() => {
+        if (!resolved) {
+          resolved = true;
+          observer.disconnect();
+          resolve(true);
+        }
+      });
+
+      observer.observe(postElement, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+
+      // Timeout fallback: resolve false after SEE_MORE_TIMEOUT
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          observer.disconnect();
+          resolve(false);
+        }
+      }, this.SEE_MORE_TIMEOUT);
+    });
   }
 
   /**

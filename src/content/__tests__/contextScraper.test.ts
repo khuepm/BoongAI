@@ -167,13 +167,35 @@ describe('ContextScraper', () => {
         expect(result).toBe(true);
       });
 
-      it('should click "See more" button if present', async () => {
+      it('should click "See more" button and wait for DOM mutation', async () => {
         const postElement = createMockPost('post-2', 'Content', true);
         const seeMoreButton = postElement.querySelector('[role="button"]') as HTMLElement;
-        const clickSpy = jest.spyOn(seeMoreButton, 'click');
+        const clickSpy = jest.spyOn(seeMoreButton, 'click').mockImplementation(() => {
+          // Simulate DOM mutation after click (e.g., expanding content)
+          const expandedContent = document.createElement('div');
+          expandedContent.textContent = 'Expanded content here';
+          postElement.appendChild(expandedContent);
+        });
 
-        await ContextScraper.expandSeeMore(postElement);
-        expect(clickSpy).toHaveBeenCalled();
+        const result = await ContextScraper.expandSeeMore(postElement);
+        expect(clickSpy).toHaveBeenCalledTimes(1);
+        expect(result).toBe(true);
+      });
+
+      it('should return false if no DOM mutation occurs within timeout', async () => {
+        const postElement = createMockPost('post-3', 'Content', true);
+        const seeMoreButton = postElement.querySelector('[role="button"]') as HTMLElement;
+        // Click does nothing — no DOM mutation will fire
+        jest.spyOn(seeMoreButton, 'click').mockImplementation(() => {});
+
+        // Use fake timers to avoid waiting 3 real seconds
+        jest.useFakeTimers();
+        const resultPromise = ContextScraper.expandSeeMore(postElement);
+        jest.advanceTimersByTime(3000);
+        const result = await resultPromise;
+        jest.useRealTimers();
+
+        expect(result).toBe(false);
       });
     });
 
