@@ -467,7 +467,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 42: Auto-reply comment ignored by trigger detection**
     - **Validates: Requirements 5.6**
   
-  - [~] 17.4 Write property test for single processing per unique Command_Comment
+  - [-] 17.4 Write property test for single processing per unique Command_Comment
     - **Property 43: Single processing per unique Command_Comment**
     - **Validates: Requirements 5.7**
 
