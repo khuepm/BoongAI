@@ -24,6 +24,7 @@ class DOMObserverImpl {
   private mentionRegex = /@BoongAI\b/gi;
   private debounceTimers: Map<HTMLElement, NodeJS.Timeout> = new Map();
   private highlightedElements: Set<Node> = new Set();
+  private processedCommentIds: Set<string> = new Set();
 
   /**
    * Initialize the DOM observer and start monitoring Facebook page
@@ -79,6 +80,9 @@ class DOMObserverImpl {
 
     // Clear highlighted elements
     this.highlightedElements.clear();
+
+    // Clear processed comment IDs
+    this.processedCommentIds.clear();
   }
 
   /**
@@ -151,6 +155,15 @@ class DOMObserverImpl {
   }
 
   /**
+   * Check if a Command_Comment has already been processed.
+   * Prevents re-triggering AI processing on comment edits or
+   * duplicate DOM mutation events.
+   */
+  isAlreadyProcessed(commentId: string): boolean {
+    return this.processedCommentIds.has(commentId);
+  }
+
+  /**
    * Capture comment submission and extract comment data
    */
   captureCommentSubmission(commentElement: HTMLElement): CommentData | null {
@@ -169,6 +182,11 @@ class DOMObserverImpl {
         return null;
       }
 
+      // Guard: skip already-processed comments to prevent re-triggering on edits (Requirement 5.7)
+      if (this.isAlreadyProcessed(commentId)) {
+        return null;
+      }
+
       if (!commentId || !commentText || !postId) {
         return null;
       }
@@ -179,6 +197,9 @@ class DOMObserverImpl {
         postId,
         timestamp: Date.now(),
       };
+
+      // Mark this comment as processed to prevent re-triggering on edits
+      this.processedCommentIds.add(commentId);
 
       // Trigger callback if provided
       if (this.callbacks.onCommentSubmitted) {

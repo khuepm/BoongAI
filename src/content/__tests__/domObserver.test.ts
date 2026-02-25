@@ -237,6 +237,130 @@ describe('DOM Observer Module', () => {
       });
     });
 
+    describe('isAlreadyProcessed and comment deduplication', () => {
+      test('should return false for a comment that has not been processed', () => {
+        DOMObserver.initialize();
+        expect(DOMObserver.isAlreadyProcessed('comment-new')).toBe(false);
+      });
+
+      test('should return true for a comment that has been processed', () => {
+        DOMObserver.initialize();
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-dedup-1');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '@BoongAI help me';
+        document.body.appendChild(comment);
+
+        // First call processes the comment
+        const data = DOMObserver.captureCommentSubmission(comment);
+        expect(data).toBeTruthy();
+
+        // Now it should be marked as processed
+        expect(DOMObserver.isAlreadyProcessed('comment-dedup-1')).toBe(true);
+      });
+
+      test('should return null for already-processed comments on second call', () => {
+        DOMObserver.initialize();
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-dedup-2');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '@BoongAI summarize this';
+        document.body.appendChild(comment);
+
+        // First call succeeds
+        const first = DOMObserver.captureCommentSubmission(comment);
+        expect(first).toBeTruthy();
+
+        // Second call returns null (already processed)
+        const second = DOMObserver.captureCommentSubmission(comment);
+        expect(second).toBeNull();
+      });
+
+      test('should not trigger callback for already-processed comments', () => {
+        const callback = jest.fn();
+        DOMObserver.initialize({ onCommentSubmitted: callback });
+
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-dedup-3');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '@BoongAI what is this about?';
+        document.body.appendChild(comment);
+
+        // First call triggers callback
+        DOMObserver.captureCommentSubmission(comment);
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        // Second call (simulating edit re-trigger) should NOT trigger callback
+        DOMObserver.captureCommentSubmission(comment);
+        expect(callback).toHaveBeenCalledTimes(1);
+      });
+
+      test('should handle edited comment without re-triggering', () => {
+        DOMObserver.initialize();
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-edit-1');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '@BoongAI original text';
+        document.body.appendChild(comment);
+
+        // First submission
+        const first = DOMObserver.captureCommentSubmission(comment);
+        expect(first).toBeTruthy();
+        expect(first?.commentText).toBe('@BoongAI original text');
+
+        // Simulate edit - same comment ID, different text
+        comment.textContent = '@BoongAI edited text';
+        const second = DOMObserver.captureCommentSubmission(comment);
+        expect(second).toBeNull();
+      });
+
+      test('should allow different comment IDs to be processed independently', () => {
+        DOMObserver.initialize();
+
+        const comment1 = document.createElement('div');
+        comment1.setAttribute('data-comment-id', 'comment-a');
+        comment1.setAttribute('data-post-id', 'post-1');
+        comment1.textContent = '@BoongAI first comment';
+        document.body.appendChild(comment1);
+
+        const comment2 = document.createElement('div');
+        comment2.setAttribute('data-comment-id', 'comment-b');
+        comment2.setAttribute('data-post-id', 'post-1');
+        comment2.textContent = '@BoongAI second comment';
+        document.body.appendChild(comment2);
+
+        const first = DOMObserver.captureCommentSubmission(comment1);
+        const second = DOMObserver.captureCommentSubmission(comment2);
+
+        expect(first).toBeTruthy();
+        expect(second).toBeTruthy();
+        expect(first?.commentId).toBe('comment-a');
+        expect(second?.commentId).toBe('comment-b');
+      });
+
+      test('should clear processed IDs on cleanup', () => {
+        DOMObserver.initialize();
+        const comment = document.createElement('div');
+        comment.setAttribute('data-comment-id', 'comment-cleanup');
+        comment.setAttribute('data-post-id', 'post-456');
+        comment.textContent = '@BoongAI test cleanup';
+        document.body.appendChild(comment);
+
+        // Process the comment
+        DOMObserver.captureCommentSubmission(comment);
+        expect(DOMObserver.isAlreadyProcessed('comment-cleanup')).toBe(true);
+
+        // Cleanup and reinitialize
+        DOMObserver.cleanup();
+        expect(DOMObserver.isAlreadyProcessed('comment-cleanup')).toBe(false);
+
+        // After reinitialize, the same comment can be processed again
+        DOMObserver.initialize();
+        const data = DOMObserver.captureCommentSubmission(comment);
+        expect(data).toBeTruthy();
+      });
+    });
+
     describe('Editor framework support', () => {
       test('should extract text from Lexical editor', () => {
         DOMObserver.initialize();
