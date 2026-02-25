@@ -472,13 +472,13 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Validates: Requirements 5.7**
 
 - [ ] 18. Update Context Scraper for async "See more" handling
-  - [~] 18.1 Update expandSeeMore() with DOM mutation wait
+  - [x] 18.1 Update expandSeeMore() with DOM mutation wait
     - Replace retry-based wait with MutationObserver-based wait for DOM mutation completion
     - Set maximum wait timeout to 3 seconds after clicking "See more"
     - Only extract expanded text after DOM mutation is confirmed complete
     - _Requirements: 7.2_
   
-  - [~] 18.2 Write property test for See more DOM mutation wait
+  - [-] 18.2 Write property test for See more DOM mutation wait
     - **Property 44: See more DOM mutation wait**
     - **Validates: Requirements 7.2**
 
