@@ -497,3 +497,62 @@ describe('AutoInjector Property-Based Tests', () => {
     });
   });
 });
+
+describe('Property 46: Anti-spam humanized delay', () => {
+  // Restore real implementations for delay tests (beforeEach mocks them)
+  beforeEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('Feature: boongai-facebook-assistant, **Validates: Requirements 10.4, 10.6** - generateHumanizationDelay returns value between 500 and 1500', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 1000 }), // dummy input to drive multiple iterations
+        (_seed) => {
+          const delay = AutoInjector.generateHumanizationDelay();
+
+          // Verify: Delay must be within 500ms - 1500ms range (inclusive)
+          expect(delay).toBeGreaterThanOrEqual(500);
+          expect(delay).toBeLessThanOrEqual(1500);
+
+          // Verify: Delay must be an integer (Math.floor is used)
+          expect(Number.isInteger(delay)).toBe(true);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('Feature: boongai-facebook-assistant, **Validates: Requirements 10.4, 10.6** - calculatePreSubmitDelay keeps total time in 3-5 second range', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 5000 }), // elapsed time in ms
+        (elapsedMs) => {
+          const preSubmitDelay = AutoInjector.calculatePreSubmitDelay(elapsedMs);
+
+          // Verify: Delay must be non-negative
+          expect(preSubmitDelay).toBeGreaterThanOrEqual(0);
+
+          // Verify: Delay must be an integer
+          expect(Number.isInteger(preSubmitDelay)).toBe(true);
+
+          // The submitDelay constant inside calculatePreSubmitDelay is 200ms
+          const submitDelay = 200;
+          const totalEstimated = elapsedMs + preSubmitDelay + submitDelay;
+
+          if (elapsedMs >= 3000 - submitDelay) {
+            // If enough time has already elapsed, delay should be 0
+            expect(preSubmitDelay).toBe(0);
+          } else {
+            // Total time (elapsed + preSubmitDelay + submitDelay) should reach at least 3000ms
+            expect(totalEstimated).toBeGreaterThanOrEqual(3000);
+            // Total time should not exceed 5000ms
+            expect(totalEstimated).toBeLessThanOrEqual(5000);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
