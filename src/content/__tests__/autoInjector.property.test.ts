@@ -440,4 +440,60 @@ describe('AutoInjector Property-Based Tests', () => {
       );
     });
   });
+
+  describe('Property 45: Precise reply button targeting via DOM structure', () => {
+    it('Feature: boongai-facebook-assistant, **Validates: Requirements 10.1**', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 2, max: 5 }),
+          (numComments) => {
+            // Setup: Create a shared container with N comments, each with its own reply button
+            const sharedContainer = document.createElement('div');
+            sharedContainer.className = 'comments-container';
+
+            const commentIds: string[] = [];
+            const replyButtons: Map<string, HTMLElement> = new Map();
+
+            for (let i = 0; i < numComments; i++) {
+              const commentId = `comment-${i}`;
+              commentIds.push(commentId);
+
+              const commentElement = document.createElement('div');
+              commentElement.setAttribute('role', 'article');
+              commentElement.setAttribute('data-boongai-comment-id', commentId);
+
+              const replyButton = document.createElement('div');
+              replyButton.setAttribute('role', 'button');
+              replyButton.setAttribute('aria-label', 'Reply');
+              replyButton.setAttribute('data-reply-for', commentId); // tracking marker
+              commentElement.appendChild(replyButton);
+
+              replyButtons.set(commentId, replyButton);
+              sharedContainer.appendChild(commentElement);
+            }
+
+            document.body.appendChild(sharedContainer);
+
+            // Action & Verify: For each comment, findReplyButton should return
+            // the reply button that is strictly structurally bound to that comment
+            for (const commentId of commentIds) {
+              const foundButton = AutoInjector.findReplyButton(commentId);
+
+              // Should find a reply button
+              expect(foundButton).not.toBeNull();
+
+              // Should be the exact reply button inside this specific comment
+              const expectedButton = replyButtons.get(commentId)!;
+              expect(foundButton).toBe(expectedButton);
+              expect(foundButton?.getAttribute('data-reply-for')).toBe(commentId);
+            }
+
+            // Cleanup
+            document.body.innerHTML = '';
+          }
+        ),
+        { numRuns: 20 }
+      );
+    });
+  });
 });
