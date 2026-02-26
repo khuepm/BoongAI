@@ -337,7 +337,7 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - Handle errors and send error responses
     - _Requirements: 9.1, 9.2_
 
-- [-] 11. Implement Popup UI
+- [x] 11. Implement Popup UI
   - [x] 11.1 Create popup HTML structure and styling
     - Create popup.html with master switch, provider dropdown, model dropdown, API key input
     - Add connection indicator next to API key input
@@ -503,13 +503,13 @@ This implementation plan breaks down the BoongAI Facebook Assistant Chrome Exten
     - **Property 46: Anti-spam humanized delay**
     - **Validates: Requirements 10.4, 10.6**
 
-- [ ] 20. Update Configuration Manager security note
+- [x] 20. Update Configuration Manager security note
   - [x] 20.1 Add security context comment to encryption module
     - Add code comment documenting that Chrome Storage is local-only and encryption is defense-in-depth
     - Ensure no functional changes to encryption logic
     - _Requirements: 14.4_
 
-- [ ] 21. Final checkpoint - Verify all refinements
+- [x] 21. Final checkpoint - Verify all refinements
   - Run complete test suite (unit + property + integration)
   - Verify infinite loop prevention works correctly
   - Verify "See more" async handling with DOM mutation wait
