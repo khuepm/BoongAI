@@ -2,7 +2,7 @@
 <html class="dark" lang="en">
 <head>
     <meta charset="utf-8"/>
-    <title>BoongAI Settings (M3 Expressive)</title>
+    <title>BoongAI Settings</title>
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet"/>
@@ -13,7 +13,7 @@
       body {
         margin: 0;
         width: 320px;
-        height: 400px;
+        height: 450px;
         min-height: unset !important;
         overflow: hidden;
       }
@@ -25,8 +25,11 @@
             <h1 class="text-2xl font-normal text-on-surface dark:text-dark-on-surface tracking-normal font-display">BoongAI</h1>
             <label class="m3-switch relative inline-flex items-center cursor-pointer">
                 <input checked="" class="sr-only peer" type="checkbox" id="active-toggle"/>
-                <div class="w-[52px] h-8 bg-surface-variant dark:bg-gray-700 border-2 border-outline dark:border-gray-500 peer-focus:outline-none rounded-full transition-all duration-200 relative flex items-center">
-                    <div class="absolute left-[2px] top-[50%] -translate-y-1/2 h-6 w-6 rounded-full transition-all duration-200 z-10 after:content-[''] after:absolute after:inset-0 after:rounded-full pointer-events-none flex items-center justify-center"></div>
+                <div class="w-[52px] h-8 bg-surface-variant dark:bg-gray-700 border-2 border-outline dark:border-gray-500 peer-focus:outline-none rounded-full transition-all duration-300 relative flex items-center">
+                    <div class="switch-thumb absolute left-[2px] top-[50%] -translate-y-1/2 h-6 w-6 bg-outline dark:bg-gray-400 rounded-full transition-all duration-300 z-10 flex items-center justify-center shadow-md">
+                        <span class="material-symbols-outlined text-[16px] text-surface dark:text-dark-surface transition-opacity duration-200 opacity-0 switch-icon-off">close</span>
+                        <span class="material-symbols-outlined text-[16px] text-on-primary dark:text-dark-on-primary transition-opacity duration-200 opacity-0 switch-icon-on absolute">check</span>
+                    </div>
                 </div>
             </label>
         </div>

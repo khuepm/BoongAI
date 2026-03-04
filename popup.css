@@ -548,6 +548,11 @@ body {
   --tw-backdrop-sepia:  ;
 }
 
+/* Material Design 3 Switch Styles */
+.m3-switch {
+  position: relative;
+}
+
 .m3-switch input:checked + div {
   background-color: var(--primary-color, #006492);
   border-color: var(--primary-color, #006492);
@@ -558,31 +563,62 @@ body {
   border-color: #8aceff;
 }
 
-.m3-switch input:checked + div::after {
-  transform: translateX(20px);
+.m3-switch input:checked + div .switch-thumb {
+  transform: translateX(20px) translateY(-50%);
   background-color: #ffffff;
   width: 24px;
   height: 24px;
 }
 
-.dark .m3-switch input:checked + div::after {
+.dark .m3-switch input:checked + div .switch-thumb {
   background-color: #00344e;
 }
 
-.m3-switch input:checked + div .icon-on {
+.m3-switch input:checked + div .switch-icon-on {
   opacity: 1;
 }
 
-.m3-switch input:checked + div .icon-off {
+.m3-switch input:checked + div .switch-icon-off {
   opacity: 0;
 }
 
-.m3-switch div::after {
-  background-color: #74777f;
+.m3-switch input:not(:checked) + div .switch-icon-off {
+  opacity: 1;
 }
 
-.dark .m3-switch div::after {
+.m3-switch input:not(:checked) + div .switch-icon-on {
+  opacity: 0;
+}
+
+.m3-switch .switch-thumb {
+  background-color: #74777f;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dark .m3-switch .switch-thumb {
   background-color: #8e9099;
+}
+
+/* Hover effects */
+.m3-switch:hover input:not(:checked) + div .switch-thumb {
+  background-color: #5f6368;
+}
+
+.dark .m3-switch:hover input:not(:checked) + div .switch-thumb {
+  background-color: #9aa0a6;
+}
+
+.m3-switch:hover input:checked + div .switch-thumb {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Focus ring */
+.m3-switch input:focus + div {
+  box-shadow: 0 0 0 2px rgba(0, 100, 146, 0.2);
+}
+
+.dark .m3-switch input:focus + div {
+  box-shadow: 0 0 0 2px rgba(138, 206, 255, 0.2);
 }
 
 .peer:-moz-placeholder-shown ~ .floating-label {

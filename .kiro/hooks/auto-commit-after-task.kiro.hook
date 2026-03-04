@@ -4,10 +4,12 @@
   "description": "Automatically creates a conventional commit and pushes to GitHub after completing a task",
   "version": "1",
   "when": {
-    "type": "postTaskExecution"
+    "type": "agentStop"
   },
   "then": {
     "type": "askAgent",
     "prompt": "Hãy tạo git commit tuân theo conventional commit format (feat:, fix:, chore:, docs:, etc.) với message mô tả rõ ràng task vừa hoàn thành. Sau đó push lên GitHub. Sử dụng git add để stage các file đã thay đổi, tạo commit với message phù hợp, và push lên remote repository."
-  }
+  },
+  "workspaceFolderName": "BoongAI",
+  "shortName": "auto-commit-after-task"
 }

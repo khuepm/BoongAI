@@ -6,9 +6,26 @@ describe('AutoInjector Property-Based Tests', () => {
     // Clear DOM
     document.body.innerHTML = '';
     // Mock humanization delay to speed up tests (avoid real 500-1500ms waits)
-    jest.spyOn(AutoInjector, 'generateHumanizationDelay').mockReturnValue(10);
+    jest.spyOn(AutoInjector, 'generateHumanizationDelay').mockReturnValue(0);
     // Mock pre-submit delay to speed up tests (avoid real 2-3s waits for 3-5s target)
     jest.spyOn(AutoInjector, 'calculatePreSubmitDelay').mockReturnValue(0);
+    // Mock clickReplyButton to avoid real setTimeout (150ms) that causes test worker hanging
+    jest.spyOn(AutoInjector, 'clickReplyButton').mockImplementation(async (button: HTMLElement) => {
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+      button.dispatchEvent(clickEvent);
+    });
+    // Mock submitReply to avoid real setTimeout (200ms) that causes test worker hanging
+    jest.spyOn(AutoInjector, 'submitReply').mockImplementation(async (inputField: HTMLElement) => {
+      const container = inputField.closest('[role="dialog"], [role="article"], form, .comment-form');
+      const submitButton = container?.querySelector('button[type="submit"]') as HTMLElement | null;
+      if (submitButton) {
+        const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+        submitButton.dispatchEvent(clickEvent);
+        return;
+      }
+      const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter' });
+      inputField.dispatchEvent(enterEvent);
+    });
   });
 
   afterEach(() => {

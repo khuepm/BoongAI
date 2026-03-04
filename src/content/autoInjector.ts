@@ -329,7 +329,8 @@ export class AutoInjector {
 
   private static async injectTextDirectly(inputField: HTMLElement, text: string): Promise<void> {
     // Check if it's a contenteditable element (Facebook uses these)
-    if (inputField.isContentEditable) {
+    // Also check the attribute directly for environments where isContentEditable is not implemented
+    if (inputField.isContentEditable || inputField.getAttribute('contenteditable') === 'true') {
       inputField.textContent = text;
     } else if (inputField instanceof HTMLInputElement || inputField instanceof HTMLTextAreaElement) {
       inputField.value = text;
