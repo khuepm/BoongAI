@@ -12,6 +12,11 @@ class PopupUI {
   private connectionIndicator!: HTMLElement;
   private validationError!: HTMLElement;
   private apiGuideLink!: HTMLAnchorElement;
+  private apiGuideModal!: HTMLElement;
+  private closeModalBtn!: HTMLButtonElement;
+  private openProviderSiteBtn!: HTMLButtonElement;
+  private guideContent!: HTMLElement;
+  private providerNameSpan!: HTMLElement;
   private currentConfig: ExtensionConfig | null = null;
   private validationTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -25,6 +30,11 @@ class PopupUI {
     this.connectionIndicator = document.getElementById('connection-indicator') as HTMLElement;
     this.validationError = document.getElementById('validation-error') as HTMLElement;
     this.apiGuideLink = document.getElementById('api-guide-link') as HTMLAnchorElement;
+    this.apiGuideModal = document.getElementById('api-guide-modal') as HTMLElement;
+    this.closeModalBtn = document.getElementById('close-modal') as HTMLButtonElement;
+    this.openProviderSiteBtn = document.getElementById('open-provider-site') as HTMLButtonElement;
+    this.guideContent = document.getElementById('guide-content') as HTMLElement;
+    this.providerNameSpan = document.getElementById('provider-name') as HTMLElement;
   }
 
   async initialize(): Promise<void> {
@@ -70,7 +80,23 @@ class PopupUI {
     this.togglePasswordBtn.addEventListener('click', () => this.togglePasswordVisibility());
     this.apiGuideLink.addEventListener('click', (e) => {
       e.preventDefault();
-      this.handleGuideLink();
+      this.showApiGuideModal();
+    });
+    this.closeModalBtn.addEventListener('click', () => this.hideApiGuideModal());
+    this.openProviderSiteBtn.addEventListener('click', () => this.openProviderSite());
+    
+    // Close modal when clicking outside
+    this.apiGuideModal.addEventListener('click', (e) => {
+      if (e.target === this.apiGuideModal) {
+        this.hideApiGuideModal();
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !this.apiGuideModal.classList.contains('hidden')) {
+        this.hideApiGuideModal();
+      }
     });
 
     // Keep floating labels in sync
@@ -96,6 +122,12 @@ class PopupUI {
     // Reset validation state when provider changes
     this.updateConnectionIndicator(null);
     this.hideValidationError();
+
+    // Update modal content if it's currently open
+    if (!this.apiGuideModal.classList.contains('hidden')) {
+      this.updateGuideContent(provider);
+      this.providerNameSpan.textContent = this.getProviderDisplayName(provider);
+    }
   }
 
   private handleModelSelection(): void {
@@ -219,6 +251,232 @@ class PopupUI {
         this.togglePasswordIcon.style.transform = 'scale(1)';
       }, 100);
     }
+  }
+
+  private showApiGuideModal(): void {
+    const provider = this.providerSelect.value as AIProvider;
+    this.updateGuideContent(provider);
+    this.providerNameSpan.textContent = this.getProviderDisplayName(provider);
+    this.apiGuideModal.classList.remove('hidden');
+  }
+
+  private hideApiGuideModal(): void {
+    this.apiGuideModal.classList.add('hidden');
+  }
+
+  private openProviderSite(): void {
+    const provider = this.providerSelect.value as AIProvider;
+    const guideUrls: Record<AIProvider, string> = {
+      openai: 'https://platform.openai.com/api-keys',
+      gemini: 'https://makersuite.google.com/app/apikey',
+      claude: 'https://console.anthropic.com/settings/keys'
+    };
+    chrome.tabs.create({ url: guideUrls[provider] });
+    this.hideApiGuideModal();
+  }
+
+  private getProviderDisplayName(provider: AIProvider): string {
+    const displayNames: Record<AIProvider, string> = {
+      openai: 'OpenAI',
+      gemini: 'Google',
+      claude: 'Anthropic'
+    };
+    return displayNames[provider];
+  }
+
+  private updateGuideContent(provider: AIProvider): void {
+    const guides: Record<AIProvider, string> = {
+      openai: this.getOpenAIGuide(),
+      gemini: this.getGeminiGuide(),
+      claude: this.getClaudeGuide()
+    };
+    this.guideContent.innerHTML = guides[provider];
+  }
+
+  private getOpenAIGuide(): string {
+    return `
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">1</span>
+          <div>
+            <div class="guide-step-title">Create OpenAI Account</div>
+            <div class="guide-step-description">
+              Visit <strong>platform.openai.com</strong> and sign up for an account if you don't have one.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">2</span>
+          <div>
+            <div class="guide-step-title">Add Payment Method</div>
+            <div class="guide-step-description">
+              Go to <strong>Billing → Payment methods</strong> and add a credit card. OpenAI requires a payment method for API access.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">3</span>
+          <div>
+            <div class="guide-step-title">Generate API Key</div>
+            <div class="guide-step-description">
+              Navigate to <strong>API keys</strong> section and click <strong>"Create new secret key"</strong>. Give it a descriptive name like "BoongAI Extension".
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">4</span>
+          <div>
+            <div class="guide-step-title">Copy and Paste</div>
+            <div class="guide-step-description">
+              Copy the generated API key (starts with <code class="code-snippet">sk-...</code>) and paste it into the API Key field above.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-warning">
+        <div class="guide-warning-title">
+          <span class="material-symbols-outlined text-[16px] mr-2">warning</span>
+          Important Security Note
+        </div>
+        <div class="guide-warning-description">
+          Keep your API key secure and never share it publicly. The key will be encrypted and stored locally in your browser.
+        </div>
+      </div>
+    `;
+  }
+
+  private getGeminiGuide(): string {
+    return `
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">1</span>
+          <div>
+            <div class="guide-step-title">Access Google AI Studio</div>
+            <div class="guide-step-description">
+              Visit <strong>makersuite.google.com</strong> and sign in with your Google account.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">2</span>
+          <div>
+            <div class="guide-step-title">Navigate to API Keys</div>
+            <div class="guide-step-description">
+              Click on <strong>"Get API key"</strong> in the left sidebar or go directly to the API keys section.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">3</span>
+          <div>
+            <div class="guide-step-title">Create New Key</div>
+            <div class="guide-step-description">
+              Click <strong>"Create API key"</strong> and select an existing Google Cloud project or create a new one.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">4</span>
+          <div>
+            <div class="guide-step-title">Copy Your Key</div>
+            <div class="guide-step-description">
+              Copy the generated API key (starts with <code class="code-snippet">AIza...</code>) and paste it into the API Key field above.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-warning">
+        <div class="guide-warning-title">
+          <span class="material-symbols-outlined text-[16px] mr-2">info</span>
+          Free Tier Available
+        </div>
+        <div class="guide-warning-description">
+          Google Gemini offers a generous free tier with rate limits. No payment method required for basic usage.
+        </div>
+      </div>
+    `;
+  }
+
+  private getClaudeGuide(): string {
+    return `
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">1</span>
+          <div>
+            <div class="guide-step-title">Create Anthropic Account</div>
+            <div class="guide-step-description">
+              Visit <strong>console.anthropic.com</strong> and create an account or sign in if you already have one.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">2</span>
+          <div>
+            <div class="guide-step-title">Add Credits</div>
+            <div class="guide-step-description">
+              Go to <strong>Settings → Billing</strong> and add credits to your account. Anthropic uses a prepaid credit system.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">3</span>
+          <div>
+            <div class="guide-step-title">Generate API Key</div>
+            <div class="guide-step-description">
+              Navigate to <strong>Settings → API Keys</strong> and click <strong>"Create Key"</strong>. Give it a name like "BoongAI Extension".
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="flex items-start">
+          <span class="guide-step-number">4</span>
+          <div>
+            <div class="guide-step-title">Copy and Use</div>
+            <div class="guide-step-description">
+              Copy the generated API key (starts with <code class="code-snippet">sk-ant-...</code>) and paste it into the API Key field above.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-warning">
+        <div class="guide-warning-title">
+          <span class="material-symbols-outlined text-[16px] mr-2">account_balance_wallet</span>
+          Credit-Based Pricing
+        </div>
+        <div class="guide-warning-description">
+          Anthropic uses prepaid credits. Monitor your usage in the console to avoid service interruption.
+        </div>
+      </div>
+    `;
   }
 
   private handleGuideLink(): void {

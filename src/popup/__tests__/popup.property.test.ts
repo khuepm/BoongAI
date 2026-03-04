@@ -22,6 +22,26 @@ function createPopupDOM(): void {
     <p id="validation-error" class="hidden"></p>
     <button id="toggle-password"><span id="toggle-password-icon">visibility</span></button>
     <a id="api-guide-link" href="#">How to get an API key?</a>
+    
+    <!-- API Key Guide Modal -->
+    <div id="api-guide-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+      <div class="bg-surface dark:bg-dark-surface rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="px-6 py-4 border-b border-outline dark:border-gray-600 flex items-center justify-between">
+          <h2 class="text-lg font-medium text-on-surface dark:text-dark-on-surface">Get API Key</h2>
+          <button id="close-modal" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <span class="material-symbols-outlined text-on-surface-variant dark:text-gray-400">close</span>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="guide-content"></div>
+        </div>
+        <div class="px-6 py-4 border-t border-outline dark:border-gray-600 flex justify-end gap-3">
+          <button id="open-provider-site" class="px-4 py-2 bg-primary dark:bg-dark-primary text-on-primary dark:text-dark-on-primary rounded-md hover:bg-primary-variant dark:hover:bg-dark-primary-variant transition-colors font-medium">
+            Open <span id="provider-name">Provider</span> Site
+          </button>
+        </div>
+      </div>
+    </div>
   `;
 }
 
@@ -188,21 +208,15 @@ describe('Popup UI Property Tests', () => {
     });
   });
 
-  describe('Property 7: Guide link opens new tab', () => {
+  describe('Property 7: Guide link opens modal', () => {
     /**
      * Validates: Requirements 4.3
      *
-     * For any click on the API key guide link, a new browser tab
-     * should open with the guide page.
+     * For any click on the API key guide link, a modal should open
+     * with provider-specific instructions.
      */
-    test('Feature: boongai-facebook-assistant, Property 7: Guide link opens new tab', async () => {
+    test('Feature: boongai-facebook-assistant, Property 7: Guide link opens modal', async () => {
       const { PopupUI } = await import('../../popup/popup');
-
-      const expectedUrls: Record<AIProvider, string> = {
-        openai: 'https://platform.openai.com/api-keys',
-        gemini: 'https://makersuite.google.com/app/apikey',
-        claude: 'https://console.anthropic.com/settings/keys',
-      };
 
       await fc.assert(
         fc.asyncProperty(
@@ -225,14 +239,63 @@ describe('Popup UI Property Tests', () => {
             const guideLink = document.getElementById('api-guide-link') as HTMLAnchorElement;
             guideLink.click();
 
-            // Verify chrome.tabs.create was called with the correct URL
-            expect(chrome.tabs.create).toHaveBeenCalledWith({
-              url: expectedUrls[provider],
-            });
+            // Verify modal is shown
+            const modal = document.getElementById('api-guide-modal') as HTMLElement;
+            expect(modal.classList.contains('hidden')).toBe(false);
+
+            // Verify provider name is updated
+            const providerNameSpan = document.getElementById('provider-name') as HTMLElement;
+            const expectedNames: Record<AIProvider, string> = {
+              openai: 'OpenAI',
+              gemini: 'Google',
+              claude: 'Anthropic'
+            };
+            expect(providerNameSpan.textContent).toBe(expectedNames[provider]);
+
+            // Verify guide content is populated
+            const guideContent = document.getElementById('guide-content') as HTMLElement;
+            expect(guideContent.innerHTML).not.toBe('');
+            expect(guideContent.innerHTML.length).toBeGreaterThan(100);
           }
         ),
         { numRuns: 10 }
       );
+    });
+
+    test('modal can be closed and opens provider site', async () => {
+      const { PopupUI } = await import('../../popup/popup');
+
+      createPopupDOM();
+      setupChromeMocks();
+
+      const popup = new PopupUI();
+      await popup.initialize();
+
+      // Open modal
+      const guideLink = document.getElementById('api-guide-link') as HTMLAnchorElement;
+      guideLink.click();
+
+      const modal = document.getElementById('api-guide-modal') as HTMLElement;
+      expect(modal.classList.contains('hidden')).toBe(false);
+
+      // Test close button
+      const closeBtn = document.getElementById('close-modal') as HTMLButtonElement;
+      closeBtn.click();
+      expect(modal.classList.contains('hidden')).toBe(true);
+
+      // Re-open modal
+      guideLink.click();
+      expect(modal.classList.contains('hidden')).toBe(false);
+
+      // Test provider site button
+      const openSiteBtn = document.getElementById('open-provider-site') as HTMLButtonElement;
+      openSiteBtn.click();
+
+      // Verify chrome.tabs.create was called and modal is closed
+      expect(chrome.tabs.create).toHaveBeenCalledWith({
+        url: 'https://platform.openai.com/api-keys', // default provider is openai
+      });
+      expect(modal.classList.contains('hidden')).toBe(true);
     });
   });
 
