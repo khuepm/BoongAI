@@ -198,12 +198,26 @@ class PopupUI {
   }
 
   private togglePasswordVisibility(): void {
-    if (this.apiKeyInput.type === 'password') {
+    const isCurrentlyPassword = this.apiKeyInput.type === 'password';
+    
+    if (isCurrentlyPassword) {
+      // Show password as text
       this.apiKeyInput.type = 'text';
       this.togglePasswordIcon.textContent = 'visibility_off';
+      this.togglePasswordBtn.setAttribute('aria-label', 'Hide API key');
+      this.togglePasswordIcon.style.transform = 'scale(0.8)';
+      setTimeout(() => {
+        this.togglePasswordIcon.style.transform = 'scale(1)';
+      }, 100);
     } else {
+      // Hide password
       this.apiKeyInput.type = 'password';
       this.togglePasswordIcon.textContent = 'visibility';
+      this.togglePasswordBtn.setAttribute('aria-label', 'Show API key');
+      this.togglePasswordIcon.style.transform = 'scale(0.8)';
+      setTimeout(() => {
+        this.togglePasswordIcon.style.transform = 'scale(1)';
+      }, 100);
     }
   }
 
