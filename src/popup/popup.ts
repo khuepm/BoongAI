@@ -11,12 +11,13 @@ class PopupUI {
   private togglePasswordIcon!: HTMLElement;
   private connectionIndicator!: HTMLElement;
   private validationError!: HTMLElement;
-  private apiGuideLink!: HTMLAnchorElement;
-  private apiGuideModal!: HTMLElement;
-  private closeModalBtn!: HTMLButtonElement;
+  private apiGuideLink!: HTMLButtonElement;
+  private guideSection!: HTMLElement;
+  private closeGuideBtn!: HTMLButtonElement;
   private openProviderSiteBtn!: HTMLButtonElement;
   private guideContent!: HTMLElement;
   private providerNameSpan!: HTMLElement;
+  private providerNameInlineSpan!: HTMLElement;
   private currentConfig: ExtensionConfig | null = null;
   private validationTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -29,12 +30,13 @@ class PopupUI {
     this.togglePasswordIcon = document.getElementById('toggle-password-icon') as HTMLElement;
     this.connectionIndicator = document.getElementById('connection-indicator') as HTMLElement;
     this.validationError = document.getElementById('validation-error') as HTMLElement;
-    this.apiGuideLink = document.getElementById('api-guide-link') as HTMLAnchorElement;
-    this.apiGuideModal = document.getElementById('api-guide-modal') as HTMLElement;
-    this.closeModalBtn = document.getElementById('close-modal') as HTMLButtonElement;
+    this.apiGuideLink = document.getElementById('api-guide-link') as HTMLButtonElement;
+    this.guideSection = document.getElementById('guide-section') as HTMLElement;
+    this.closeGuideBtn = document.getElementById('close-guide') as HTMLButtonElement;
     this.openProviderSiteBtn = document.getElementById('open-provider-site') as HTMLButtonElement;
     this.guideContent = document.getElementById('guide-content') as HTMLElement;
     this.providerNameSpan = document.getElementById('provider-name') as HTMLElement;
+    this.providerNameInlineSpan = document.getElementById('provider-name-inline') as HTMLElement;
   }
 
   async initialize(): Promise<void> {
@@ -80,24 +82,10 @@ class PopupUI {
     this.togglePasswordBtn.addEventListener('click', () => this.togglePasswordVisibility());
     this.apiGuideLink.addEventListener('click', (e) => {
       e.preventDefault();
-      this.showApiGuideModal();
+      this.showApiGuide();
     });
-    this.closeModalBtn.addEventListener('click', () => this.hideApiGuideModal());
+    this.closeGuideBtn.addEventListener('click', () => this.hideApiGuide());
     this.openProviderSiteBtn.addEventListener('click', () => this.openProviderSite());
-    
-    // Close modal when clicking outside
-    this.apiGuideModal.addEventListener('click', (e) => {
-      if (e.target === this.apiGuideModal) {
-        this.hideApiGuideModal();
-      }
-    });
-
-    // Close modal with Escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !this.apiGuideModal.classList.contains('hidden')) {
-        this.hideApiGuideModal();
-      }
-    });
 
     // Keep floating labels in sync
     [this.providerSelect, this.modelSelect, this.apiKeyInput].forEach(el => {
@@ -123,9 +111,10 @@ class PopupUI {
     this.updateConnectionIndicator(null);
     this.hideValidationError();
 
-    // Update modal content if it's currently open
-    if (!this.apiGuideModal.classList.contains('hidden')) {
+    // Update guide content if it's currently open
+    if (this.guideSection.classList.contains('expanded')) {
       this.updateGuideContent(provider);
+      this.providerNameInlineSpan.textContent = this.getProviderDisplayName(provider);
       this.providerNameSpan.textContent = this.getProviderDisplayName(provider);
     }
   }
@@ -253,15 +242,16 @@ class PopupUI {
     }
   }
 
-  private showApiGuideModal(): void {
+  private showApiGuide(): void {
     const provider = this.providerSelect.value as AIProvider;
     this.updateGuideContent(provider);
+    this.providerNameInlineSpan.textContent = this.getProviderDisplayName(provider);
     this.providerNameSpan.textContent = this.getProviderDisplayName(provider);
-    this.apiGuideModal.classList.remove('hidden');
+    this.guideSection.classList.add('expanded');
   }
 
-  private hideApiGuideModal(): void {
-    this.apiGuideModal.classList.add('hidden');
+  private hideApiGuide(): void {
+    this.guideSection.classList.remove('expanded');
   }
 
   private openProviderSite(): void {
@@ -272,7 +262,6 @@ class PopupUI {
       claude: 'https://console.anthropic.com/settings/keys'
     };
     chrome.tabs.create({ url: guideUrls[provider] });
-    this.hideApiGuideModal();
   }
 
   private getProviderDisplayName(provider: AIProvider): string {
