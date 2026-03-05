@@ -196,6 +196,7 @@ class DOMObserverImpl {
         commentText,
         postId,
         timestamp: Date.now(),
+        element: commentElement, // Store reference to comment element
       };
 
       // Mark this comment as processed to prevent re-triggering on edits

@@ -135,7 +135,7 @@ function handleBackgroundMessage(
  *  4. Send AI request to background service worker
  */
 async function handleCommentSubmission(commentData: CommentData): Promise<void> {
-  const { commentId, commentText, postId } = commentData;
+  const { commentId, commentText, postId, element } = commentData;
 
   console.log('[BoongAI] Comment submission detected:', { commentId, commentText, postId });
 
@@ -164,9 +164,9 @@ async function handleCommentSubmission(commentData: CommentData): Promise<void> 
 
     console.log('[BoongAI] User request parsed:', userRequest);
 
-    // 2. Extract post content
+    // 2. Extract post content - pass comment element for better post detection
     console.log('[BoongAI] Extracting post content...');
-    const postContent = await ContextScraper.extractPostContent(postId);
+    const postContent = await ContextScraper.extractPostContent(postId, element);
     if (!postContent.content) {
       console.error('[BoongAI] Could not extract post content');
       GhostUIManager.showError(commentId, 'Could not extract post content. Please try again.');

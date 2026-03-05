@@ -71,6 +71,7 @@ export interface CommentData {
   commentText: string;
   postId: string;
   timestamp: number;
+  element?: HTMLElement; // Optional reference to the comment DOM element
 }
 
 export interface PostContent {
