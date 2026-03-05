@@ -11,6 +11,7 @@ class PopupUI {
   private togglePasswordIcon!: HTMLElement;
   private connectionIndicator!: HTMLElement;
   private validationError!: HTMLElement;
+  private testConnectionBtn!: HTMLButtonElement;
   private apiGuideLink!: HTMLButtonElement;
   private guideSection!: HTMLElement;
   private closeGuideBtn!: HTMLButtonElement;
@@ -30,6 +31,7 @@ class PopupUI {
     this.togglePasswordIcon = document.getElementById('toggle-password-icon') as HTMLElement;
     this.connectionIndicator = document.getElementById('connection-indicator') as HTMLElement;
     this.validationError = document.getElementById('validation-error') as HTMLElement;
+    this.testConnectionBtn = document.getElementById('test-connection') as HTMLButtonElement;
     this.apiGuideLink = document.getElementById('api-guide-link') as HTMLButtonElement;
     this.guideSection = document.getElementById('guide-section') as HTMLElement;
     this.closeGuideBtn = document.getElementById('close-guide') as HTMLButtonElement;
@@ -80,6 +82,7 @@ class PopupUI {
     this.modelSelect.addEventListener('change', () => this.handleModelSelection());
     this.apiKeyInput.addEventListener('input', () => this.handleApiKeyInput());
     this.togglePasswordBtn.addEventListener('click', () => this.togglePasswordVisibility());
+    this.testConnectionBtn.addEventListener('click', () => this.handleTestConnection());
     this.apiGuideLink.addEventListener('click', (e) => {
       e.preventDefault();
       this.showApiGuide();
@@ -104,7 +107,11 @@ class PopupUI {
 
   private handleProviderSelection(): void {
     const provider = this.providerSelect.value as AIProvider;
+    console.log('[BoongAI Popup] Provider changed to:', provider);
+    
     this.updateModelList(provider);
+    console.log('[BoongAI Popup] Model list updated, current model:', this.modelSelect.value);
+    
     this.saveConfiguration({ aiProvider: provider, model: this.modelSelect.value });
 
     // Reset validation state when provider changes
@@ -130,6 +137,21 @@ class PopupUI {
     this.debounceValidation(apiKey);
   }
 
+  private handleTestConnection(): void {
+    const apiKey = this.apiKeyInput.value.trim();
+    if (!apiKey) {
+      this.showValidationError('Please enter an API key first.');
+      return;
+    }
+    
+    // Clear debounce timer and validate immediately
+    if (this.validationTimer) {
+      clearTimeout(this.validationTimer);
+    }
+    
+    this.validateApiKey(apiKey);
+  }
+
   private debounceValidation(apiKey: string): void {
     if (this.validationTimer) {
       clearTimeout(this.validationTimer);
@@ -150,17 +172,25 @@ class PopupUI {
     };
 
     try {
+      console.log('[BoongAI Popup] Validating API key for provider:', provider);
       const response = await chrome.runtime.sendMessage(message) as ValidationResultMessage;
       this.updateConnectionIndicator(response.isValid);
 
       if (response.isValid) {
         this.hideValidationError();
+        console.log('[BoongAI Popup] API key valid, encrypting and saving...');
         const encryptedKey = await ConfigurationManager.encryptApiKey(apiKey);
         await this.saveConfiguration({ apiKey: encryptedKey, lastValidated: Date.now() });
+        console.log('[BoongAI Popup] API key saved successfully');
+        
+        // Show success message briefly
+        this.showSuccessMessage('API key saved successfully!');
       } else {
+        console.error('[BoongAI Popup] API key validation failed:', response.error);
         this.showValidationError(response.error || 'API key validation failed.');
       }
     } catch (error) {
+      console.error('[BoongAI Popup] Validation error:', error);
       this.updateConnectionIndicator(false);
       this.showValidationError('Could not validate API key. Please try again.');
     }
@@ -183,6 +213,8 @@ class PopupUI {
     if (this.validationError) {
       this.validationError.textContent = message;
       this.validationError.classList.remove('hidden');
+      this.validationError.classList.remove('text-green-600', 'dark:text-green-400');
+      this.validationError.classList.add('text-red-600', 'dark:text-red-400');
     }
   }
 
@@ -193,18 +225,40 @@ class PopupUI {
     }
   }
 
+  private showSuccessMessage(message: string): void {
+    if (this.validationError) {
+      this.validationError.textContent = message;
+      this.validationError.classList.remove('hidden');
+      this.validationError.classList.remove('text-red-600', 'dark:text-red-400');
+      this.validationError.classList.add('text-green-600', 'dark:text-green-400');
+      
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        this.hideValidationError();
+      }, 3000);
+    }
+  }
+
   updateModelList(provider: AIProvider): void {
+    console.log('[BoongAI Popup] Updating model list for provider:', provider);
     this.modelSelect.innerHTML = '';
     const models = SUPPORTED_MODELS[provider];
+    console.log('[BoongAI Popup] Available models:', models);
+    
     models.forEach(model => {
       const option = document.createElement('option');
       option.value = model;
       option.textContent = this.formatModelName(model);
       this.modelSelect.appendChild(option);
     });
+    
     if (models.length > 0) {
       this.modelSelect.value = models[0];
+      console.log('[BoongAI Popup] Selected first model:', models[0]);
     }
+    
+    // Trigger floating label update
+    this.updateFloatingLabels();
   }
 
   private formatModelName(model: string): string {
