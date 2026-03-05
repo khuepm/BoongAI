@@ -132,11 +132,21 @@ function handleBackgroundMessage(
 async function handleCommentSubmission(commentData: CommentData): Promise<void> {
   const { commentId, commentText, postId } = commentData;
 
+  console.log('[BoongAI] Comment submission detected:', { commentId, commentText, postId });
+
   // Guard: only process comments that contain the trigger
-  if (!/@BoongAI\b/i.test(commentText)) return;
+  if (!/@BoongAI\b/i.test(commentText)) {
+    console.log('[BoongAI] Comment does not contain @BoongAI trigger, skipping');
+    return;
+  }
+
+  console.log('[BoongAI] @BoongAI trigger detected, processing...');
 
   // Guard: prevent duplicate processing
-  if (!ErrorHandler.canProceed(commentId)) return;
+  if (!ErrorHandler.canProceed(commentId)) {
+    console.log('[BoongAI] Comment already being processed, skipping');
+    return;
+  }
 
   try {
     // 1. Parse the user request (text after @BoongAI)
@@ -147,16 +157,23 @@ async function handleCommentSubmission(commentData: CommentData): Promise<void> 
       return;
     }
 
+    console.log('[BoongAI] User request parsed:', userRequest);
+
     // 2. Extract post content
+    console.log('[BoongAI] Extracting post content...');
     const postContent = await ContextScraper.extractPostContent(postId);
     if (!postContent.content) {
+      console.error('[BoongAI] Could not extract post content');
       GhostUIManager.showError(commentId, 'Could not extract post content. Please try again.');
       ErrorHandler.completeOperation(commentId);
       return;
     }
 
+    console.log('[BoongAI] Post content extracted:', postContent.content.substring(0, 100) + '...');
+
     // 3. Show processing indicator
     GhostUIManager.showProcessing(commentId);
+    console.log('[BoongAI] Processing indicator shown');
 
     // 4. Package and send AI request to background
     const requestPackage = ContextScraper.packageRequest(userRequest, postContent);
@@ -168,6 +185,7 @@ async function handleCommentSubmission(commentData: CommentData): Promise<void> 
       commentId,
     };
 
+    console.log('[BoongAI] Sending AI request to background script...');
     chrome.runtime.sendMessage(aiRequest);
   } catch (error) {
     console.error('[BoongAI] Error in comment submission handler:', error);
