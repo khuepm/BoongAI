@@ -42,13 +42,17 @@ class PopupUI {
   }
 
   async initialize(): Promise<void> {
+    console.log('[BoongAI Popup] Initializing popup UI...');
     await this.loadConfiguration();
     this.setupEventListeners();
     this.updateFloatingLabels();
+    console.log('[BoongAI Popup] Popup UI initialized successfully');
   }
 
   private async loadConfiguration(): Promise<void> {
+    console.log('[BoongAI Popup] Loading configuration...');
     this.currentConfig = await ConfigurationManager.loadConfig();
+    console.log('[BoongAI Popup] Configuration loaded:', this.currentConfig);
 
     this.activeToggle.checked = this.currentConfig.masterSwitch;
     this.providerSelect.value = this.currentConfig.aiProvider;
@@ -74,12 +78,25 @@ class PopupUI {
         this.updateConnectionIndicator(true);
       }
     }
+    
+    console.log('[BoongAI Popup] Configuration loaded successfully');
   }
 
   private setupEventListeners(): void {
+    console.log('[BoongAI Popup] Setting up event listeners...');
+    
     this.activeToggle.addEventListener('change', () => this.handleMasterSwitchToggle());
-    this.providerSelect.addEventListener('change', () => this.handleProviderSelection());
+    console.log('[BoongAI Popup] Master switch listener added');
+    
+    this.providerSelect.addEventListener('change', () => {
+      console.log('[BoongAI Popup] Provider select change event fired');
+      this.handleProviderSelection();
+    });
+    console.log('[BoongAI Popup] Provider select listener added');
+    
     this.modelSelect.addEventListener('change', () => this.handleModelSelection());
+    console.log('[BoongAI Popup] Model select listener added');
+    
     this.apiKeyInput.addEventListener('input', () => this.handleApiKeyInput());
     this.togglePasswordBtn.addEventListener('click', () => this.togglePasswordVisibility());
     this.testConnectionBtn.addEventListener('click', () => this.handleTestConnection());
@@ -95,6 +112,8 @@ class PopupUI {
       el.addEventListener('input', () => this.updateFloatingLabels());
       el.addEventListener('change', () => this.updateFloatingLabels());
     });
+    
+    console.log('[BoongAI Popup] All event listeners set up successfully');
   }
 
   private async handleMasterSwitchToggle(): Promise<void> {
@@ -552,6 +571,7 @@ class PopupUI {
 
 // Initialize popup UI when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('[BoongAI Popup] DOM loaded, initializing popup...');
   const popup = new PopupUI();
   popup.initialize();
 });
