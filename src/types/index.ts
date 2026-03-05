@@ -12,7 +12,7 @@ export type AIProvider = 'openai' | 'gemini' | 'claude';
 
 export const DEFAULT_CONFIG: ExtensionConfig = {
   version: '1.0.0',
-  masterSwitch: false,
+  masterSwitch: true,
   aiProvider: 'openai',
   model: 'gpt-3.5-turbo',
   apiKey: '',

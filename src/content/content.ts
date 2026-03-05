@@ -34,8 +34,13 @@ function initialize(): void {
 
   // Load persisted config and check master switch
   chrome.storage.local.get(['masterSwitch'], (result) => {
-    if (result.masterSwitch) {
+    console.log('[BoongAI] Master switch value:', result.masterSwitch);
+    
+    // Enable by default if masterSwitch is not explicitly set to false
+    if (result.masterSwitch !== false) {
       enableExtension();
+    } else {
+      console.log('[BoongAI] Extension disabled by master switch');
     }
   });
 
