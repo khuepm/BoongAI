@@ -10,6 +10,7 @@ export interface CommentData {
   commentText: string;
   postId: string;
   timestamp: number;
+  element?: HTMLElement;
 }
 
 export interface DOMObserverCallbacks {
@@ -190,6 +191,9 @@ class DOMObserverImpl {
       if (!commentId || !commentText || !postId) {
         return null;
       }
+
+      // Store the comment ID as a data attribute for later retrieval
+      commentElement.setAttribute('data-boongai-comment-id', commentId);
 
       const commentData: CommentData = {
         commentId,

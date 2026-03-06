@@ -97,25 +97,42 @@ async function handleAIRequest(
   message: AIRequestMessage,
   sendResponse: (response: AIResponseMessage) => void
 ): Promise<void> {
+  console.log('[BoongAI Background] ========== AI REQUEST START ==========');
+  console.log('[BoongAI Background] Comment ID:', message.commentId);
+  console.log('[BoongAI Background] User Request:', message.userRequest);
+  console.log('[BoongAI Background] Post Content:', message.postContent.substring(0, 200) + '...');
+  
   try {
     // Load current configuration for provider, model, and API key
     const config = await ConfigurationManager.loadConfig();
+    console.log('[BoongAI Background] Config loaded:', {
+      provider: config.aiProvider,
+      model: config.model,
+      hasApiKey: !!config.apiKey,
+      masterSwitch: config.masterSwitch
+    });
 
     // Decrypt the stored API key
     let apiKey = config.apiKey;
     if (apiKey) {
       try {
         apiKey = await ConfigurationManager.decryptApiKey(apiKey);
+        console.log('[BoongAI Background] API key decrypted successfully');
       } catch {
         // If decryption fails, use the raw value (may be unencrypted during dev)
-        console.warn('[BoongAI] Could not decrypt API key, using raw value');
+        console.warn('[BoongAI Background] Could not decrypt API key, using raw value');
       }
+    } else {
+      console.error('[BoongAI Background] ❌ NO API KEY FOUND!');
+      throw new Error('API key not configured. Please set up your API key in the extension settings.');
     }
 
     // Build the prompt from user request + post context
     const prompt = AICommunicator.formatPrompt(message.userRequest, message.postContent);
+    console.log('[BoongAI Background] Prompt formatted:', prompt.substring(0, 200) + '...');
 
     // Send the request to the configured AI provider
+    console.log('[BoongAI Background] Sending request to AI provider...');
     const aiResponse = await AICommunicator.sendRequest({
       provider: config.aiProvider,
       model: config.model,
@@ -124,14 +141,23 @@ async function handleAIRequest(
       timeout: 30_000
     });
 
-    sendResponse({
+    console.log('[BoongAI Background] ✅ AI Response received:', aiResponse.text.substring(0, 200) + '...');
+    console.log('[BoongAI Background] Response length:', aiResponse.text.length);
+
+    const responseMessage: AIResponseMessage = {
       type: 'AI_RESPONSE',
       commentId: message.commentId,
       response: aiResponse.text,
       success: true
-    });
+    };
+    
+    console.log('[BoongAI Background] Sending response back to content script...');
+    sendResponse(responseMessage);
+    console.log('[BoongAI Background] ========== AI REQUEST SUCCESS ==========');
   } catch (error) {
+    console.error('[BoongAI Background] ❌ AI Request failed:', error);
     const errorMessage = AICommunicator.handleError(error as Error);
+    console.error('[BoongAI Background] Error details:', errorMessage);
 
     // Log via ErrorHandler for structured console output
     ErrorHandler.handle(
@@ -143,13 +169,16 @@ async function handleAIRequest(
       { commentId: message.commentId, operation: 'AI_REQUEST', retryCount: 0 }
     );
 
-    sendResponse({
+    const responseMessage: AIResponseMessage = {
       type: 'AI_RESPONSE',
       commentId: message.commentId,
       response: '',
       success: false,
       error: errorMessage
-    });
+    };
+    
+    sendResponse(responseMessage);
+    console.log('[BoongAI Background] ========== AI REQUEST FAILED ==========');
   }
 }
 
