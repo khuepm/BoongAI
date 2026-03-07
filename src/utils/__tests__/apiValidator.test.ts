@@ -64,7 +64,7 @@ describe('APIValidator', () => {
 
       expect(result.isValid).toBe(true);
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://generativelanguage.googleapis.com/v1/models?key=test-gemini-key',
+        'https://generativelanguage.googleapis.com/v1beta/models?key=test-gemini-key',
         expect.objectContaining({
           method: 'GET'
         })

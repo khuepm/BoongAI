@@ -21,6 +21,9 @@ import { ErrorHandler } from '@/utils/errorHandler';
 /** Track whether the extension is currently enabled */
 let isEnabled = false;
 
+/** Store pending AI requests keyed by commentId for retry support */
+const pendingRequests = new Map<string, { userRequest: string; postContent: string }>();
+
 // ---------------------------------------------------------------------------
 // Initialization
 // ---------------------------------------------------------------------------
@@ -176,27 +179,50 @@ async function handleCommentSubmission(commentData: CommentData): Promise<void> 
 
     console.log('[BoongAI] Post content extracted:', postContent.content.substring(0, 100) + '...');
 
-    // 3. Show processing indicator
-    GhostUIManager.showProcessing(commentId);
-    console.log('[BoongAI] Processing indicator shown');
-
-    // 4. Package and send AI request to background
+    // 3. Package request and store for potential retry
     const requestPackage = ContextScraper.packageRequest(userRequest, postContent);
-
-    const aiRequest: AIRequestMessage = {
-      type: 'AI_REQUEST',
+    pendingRequests.set(commentId, {
       userRequest: requestPackage.userRequest,
       postContent: requestPackage.postContent,
-      commentId,
-    };
+    });
 
-    console.log('[BoongAI] Sending AI request to background script...');
-    chrome.runtime.sendMessage(aiRequest);
+    // 4. Show processing indicator with timeout safety net
+    GhostUIManager.showProcessing(commentId, 60000, (id) => {
+      GhostUIManager.showError(id, 'Request timed out. Please try again.', () => retryAIRequest(id));
+    });
+    console.log('[BoongAI] Processing indicator shown');
+
+    // 5. Send AI request to background
+    sendAIRequestMessage(commentId, requestPackage.userRequest, requestPackage.postContent);
   } catch (error) {
     console.error('[BoongAI] Error in comment submission handler:', error);
-    GhostUIManager.showError(commentId, 'An unexpected error occurred. Please try again.');
+    GhostUIManager.showError(commentId, 'An unexpected error occurred. Please try again.', () => retryAIRequest(commentId));
     ErrorHandler.completeOperation(commentId);
   }
+}
+
+function sendAIRequestMessage(commentId: string, userRequest: string, postContent: string): void {
+  const aiRequest: AIRequestMessage = {
+    type: 'AI_REQUEST',
+    userRequest,
+    postContent,
+    commentId,
+  };
+  console.log('[BoongAI] Sending AI request to background script...');
+  chrome.runtime.sendMessage(aiRequest);
+}
+
+function retryAIRequest(commentId: string): void {
+  const pending = pendingRequests.get(commentId);
+  if (!pending) {
+    console.warn('[BoongAI] No pending request found for retry:', commentId);
+    return;
+  }
+  console.log('[BoongAI] Retrying AI request for comment:', commentId);
+  GhostUIManager.showProcessing(commentId, 60000, (id) => {
+    GhostUIManager.showError(id, 'Request timed out. Please try again.', () => retryAIRequest(id));
+  });
+  sendAIRequestMessage(commentId, pending.userRequest, pending.postContent);
 }
 
 /**
@@ -208,32 +234,44 @@ async function handleCommentSubmission(commentData: CommentData): Promise<void> 
 async function handleAIResponse(message: AIResponseMessage): Promise<void> {
   const { commentId, response, success, error } = message;
 
+  console.log('[BoongAI Content] ========== AI RESPONSE RECEIVED ==========');
+  console.log('[BoongAI Content] Comment ID:', commentId);
+  console.log('[BoongAI Content] Success:', success);
+  console.log('[BoongAI Content] Response:', response ? response.substring(0, 200) + '...' : 'null');
+  console.log('[BoongAI Content] Error:', error);
+
   try {
     if (!success || !response) {
-      // Display the error in Ghost UI
+      // Display the error in Ghost UI with retry button
       const errorMsg = error?.message || 'AI processing failed. Please try again.';
+      console.log('[BoongAI Content] ❌ AI request failed, showing error:', errorMsg);
       GhostUIManager.remove(commentId); // remove processing indicator first
-      GhostUIManager.showError(commentId, errorMsg);
+      GhostUIManager.showError(commentId, errorMsg, () => retryAIRequest(commentId));
       return;
     }
 
+    console.log('[BoongAI Content] ✅ AI response successful, generating reply...');
     // Attempt to generate and post the auto-reply
     const replySuccess = await AutoInjector.generateReply(commentId, response);
 
     if (replySuccess) {
-      // Reply posted – remove Ghost UI
+      console.log('[BoongAI Content] ✅ Reply posted successfully, removing Ghost UI');
       GhostUIManager.remove(commentId);
+      pendingRequests.delete(commentId);
     } else {
-      // Reply injection failed
+      console.log('[BoongAI Content] ❌ Reply injection failed');
       GhostUIManager.remove(commentId);
       GhostUIManager.showError(commentId, 'Could not post reply. Please try manually.');
+      pendingRequests.delete(commentId);
     }
   } catch (err) {
-    console.error('[BoongAI] Error handling AI response:', err);
+    console.error('[BoongAI Content] ❌ Error handling AI response:', err);
     GhostUIManager.remove(commentId);
     GhostUIManager.showError(commentId, 'Could not post reply. Please try manually.');
+    pendingRequests.delete(commentId);
   } finally {
     ErrorHandler.completeOperation(commentId);
+    console.log('[BoongAI Content] ========== AI RESPONSE HANDLING COMPLETE ==========');
   }
 }
 
@@ -247,6 +285,7 @@ export {
   disableExtension,
   handleCommentSubmission,
   handleAIResponse,
+  retryAIRequest,
   isEnabled,
 };
 

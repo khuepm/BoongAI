@@ -161,7 +161,7 @@ describe('AICommunicator', () => {
     it('should return Gemini URL with model and API key', () => {
       const url = AICommunicator.getUrl('gemini', 'gemini-pro', 'test-key');
       
-      expect(url).toBe('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=test-key');
+      expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=test-key');
     });
 
     it('should return Claude URL', () => {

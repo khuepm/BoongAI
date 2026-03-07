@@ -4,7 +4,7 @@ import { AIRequestConfig, AIResponse, AIProvider, ErrorMessage } from '@/types';
 // Provider-specific API endpoints
 const API_ENDPOINTS = {
   openai: 'https://api.openai.com/v1/chat/completions',
-  gemini: 'https://generativelanguage.googleapis.com/v1/models',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/models',
   claude: 'https://api.anthropic.com/v1/messages'
 } as const;
 
@@ -41,10 +41,18 @@ const PROVIDER_AUTH: Record<AIProvider, ProviderAuth> = {
 
 export class AICommunicator {
   static async sendRequest(config: AIRequestConfig): Promise<AIResponse> {
+    console.log('[BoongAI AICommunicator] ========== API REQUEST START ==========');
+    console.log('[BoongAI AICommunicator] Provider:', config.provider);
+    console.log('[BoongAI AICommunicator] Model:', config.model);
+    console.log('[BoongAI AICommunicator] Has API Key:', !!config.apiKey);
+    console.log('[BoongAI AICommunicator] Timeout:', config.timeout);
+    
     const maxRetries = 2;
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      console.log(`[BoongAI AICommunicator] Attempt ${attempt + 1}/${maxRetries + 1}`);
+      
       try {
         // Create abort controller for timeout
         const controller = new AbortController();
@@ -56,7 +64,12 @@ export class AICommunicator {
           const headers = this.getHeaders(config.provider, config.apiKey);
           const body = this.getRequestBody(config.provider, config.prompt, config.model);
 
+          console.log('[BoongAI AICommunicator] Request URL:', url);
+          console.log('[BoongAI AICommunicator] Request Headers:', { ...headers, Authorization: headers.Authorization ? '***' : undefined, 'x-api-key': headers['x-api-key'] ? '***' : undefined });
+          console.log('[BoongAI AICommunicator] Request Body:', JSON.stringify(body).substring(0, 300) + '...');
+
           // Make API request
+          console.log('[BoongAI AICommunicator] Sending fetch request...');
           const response = await fetch(url, {
             method: 'POST',
             headers,
@@ -65,16 +78,22 @@ export class AICommunicator {
           });
 
           clearTimeout(timeoutId);
+          console.log('[BoongAI AICommunicator] Response status:', response.status, response.statusText);
 
           // Handle non-OK responses
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('[BoongAI AICommunicator] ❌ API Error Response:', errorData);
             throw new Error(`API request failed: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
           }
 
           // Parse response
           const rawResponse = await response.json();
+          console.log('[BoongAI AICommunicator] Raw response:', JSON.stringify(rawResponse).substring(0, 500) + '...');
+          
           const text = this.parseResponse(rawResponse, config.provider);
+          console.log('[BoongAI AICommunicator] ✅ Parsed text:', text.substring(0, 200) + '...');
+          console.log('[BoongAI AICommunicator] ========== API REQUEST SUCCESS ==========');
 
           return {
             text,
@@ -88,30 +107,36 @@ export class AICommunicator {
         }
       } catch (error) {
         lastError = error as Error;
+        console.error(`[BoongAI AICommunicator] ❌ Attempt ${attempt + 1} failed:`, error);
 
         // Check if it's an abort error (timeout)
         if (error instanceof Error && error.name === 'AbortError') {
+          console.error('[BoongAI AICommunicator] Request timed out');
           // Don't retry on timeout
           throw error;
         }
 
         // Check if it's an auth error (don't retry)
         if (error instanceof Error && error.message.includes('401')) {
+          console.error('[BoongAI AICommunicator] Authentication failed');
           throw error;
         }
 
         // If this is the last attempt, throw the error
         if (attempt === maxRetries) {
+          console.error('[BoongAI AICommunicator] All retry attempts exhausted');
           throw error;
         }
 
         // Exponential backoff: 2^attempt seconds
         const backoffMs = Math.pow(2, attempt) * 1000;
+        console.log(`[BoongAI AICommunicator] Retrying in ${backoffMs}ms...`);
         await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
     }
 
     // This should never be reached, but TypeScript needs it
+    console.error('[BoongAI AICommunicator] ========== API REQUEST FAILED ==========');
     throw lastError || new Error('Request failed after retries');
   }
 

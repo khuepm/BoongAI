@@ -132,7 +132,7 @@ export class APIValidator {
 
     try {
       // Use the models list endpoint for validation
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
         method: 'GET',
         signal: controller.signal
       });

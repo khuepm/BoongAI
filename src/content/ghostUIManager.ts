@@ -4,25 +4,51 @@ import { GhostUIElement } from '@/types';
 export class GhostUIManager {
   private static elements: Map<string, GhostUIElement> = new Map();
   private static domElements: Map<string, HTMLElement> = new Map();
+  private static processingTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
-  static showProcessing(commentId: string): void {
+  static showProcessing(
+    commentId: string,
+    timeoutMs: number = 60000,
+    onTimeout?: (commentId: string) => void
+  ): void {
     const element = this.createGhostUI(commentId, 'processing', 'AI is processing...');
     this.elements.set(commentId, element);
     this.injectGhostUI(commentId, 'processing', 'AI is processing...');
+
+    // Auto-timeout to prevent infinite spinner
+    const timer = setTimeout(() => {
+      this.processingTimers.delete(commentId);
+      if (this.elements.get(commentId)?.type === 'processing') {
+        this.remove(commentId);
+        if (onTimeout) {
+          onTimeout(commentId);
+        } else {
+          this.showError(commentId, 'Request timed out. Please try again.');
+        }
+      }
+    }, timeoutMs);
+    this.processingTimers.set(commentId, timer);
   }
 
-  static showError(commentId: string, errorMessage: string): void {
+  static showError(commentId: string, errorMessage: string, onRetry?: () => void): void {
     const element = this.createGhostUI(commentId, 'error', errorMessage);
     this.elements.set(commentId, element);
-    this.injectGhostUI(commentId, 'error', errorMessage);
+    this.injectGhostUI(commentId, 'error', errorMessage, onRetry);
     
-    // Auto-remove after 10 seconds
+    // Auto-remove after 30s (with retry button) or 10s (without)
     setTimeout(() => {
       this.remove(commentId);
-    }, 10000);
+    }, onRetry ? 30000 : 10000);
   }
 
   static remove(commentId: string): void {
+    // Cancel any pending processing timeout
+    const timer = this.processingTimers.get(commentId);
+    if (timer) {
+      clearTimeout(timer);
+      this.processingTimers.delete(commentId);
+    }
+
     const element = this.elements.get(commentId);
     if (element) {
       const domElement = this.domElements.get(commentId);
@@ -43,7 +69,7 @@ export class GhostUIManager {
     };
   }
 
-  private static injectGhostUI(commentId: string, type: 'processing' | 'error', content: string): void {
+  private static injectGhostUI(commentId: string, type: 'processing' | 'error', content: string, onRetry?: () => void): void {
     // Remove existing Ghost UI for this comment if any
     const existingElement = this.domElements.get(commentId);
     if (existingElement && existingElement.parentNode) {
@@ -79,6 +105,7 @@ export class GhostUIManager {
       ghostUI.innerHTML = `
         <span class="boongai-error-icon">⚠️</span>
         <span class="boongai-message">${this.escapeHtml(content)}</span>
+        ${onRetry ? '<button class="boongai-retry-btn">Retry</button>' : ''}
       `;
     }
 
@@ -89,6 +116,17 @@ export class GhostUIManager {
     // Append to shadow root
     shadowRoot.appendChild(style);
     shadowRoot.appendChild(ghostUI);
+
+    // Wire up retry button if provided
+    if (onRetry) {
+      const retryBtn = shadowRoot.querySelector('.boongai-retry-btn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          this.remove(commentId);
+          onRetry();
+        });
+      }
+    }
 
     // Insert below comment
     if (commentElement.parentNode) {
@@ -189,6 +227,22 @@ export class GhostUIManager {
           background: #fee;
           color: #c33;
           border: 1px solid #fcc;
+        }
+
+        .boongai-retry-btn {
+          flex-shrink: 0;
+          padding: 2px 10px;
+          background: #c33;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: 12px;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .boongai-retry-btn:hover {
+          background: #a00;
         }
       `;
     }
