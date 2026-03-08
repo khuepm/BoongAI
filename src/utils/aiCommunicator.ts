@@ -7,6 +7,41 @@ import {
   SUPPORTED_MODELS,
 } from "@/types";
 
+// Mock mode for testing - set to true to bypass API calls
+const MOCK_MODE = true;
+
+// Mock response data
+const MOCK_RESPONSE = {
+  candidates: [
+    {
+      content: {
+        parts: [
+          {
+            text: 'Tuyệt vời, đây là vài gợi ý comment Facebook ngắn gọn, hài hước khi được tag vào bài đi chơi:\n\n**Kiểu hờn dỗi nhẹ (giả vờ):**\n\n1.  "Thôi được rồi, cứ vui vẻ đi, tôi ở nhà đắp chăn ngắm ảnh là được rồi 🥲"\n2.  "Nhìn ảnh là biết vui rồi đó nha... vui quá đáng! 😤"\n3.  "Ghen tị xỉu! Lần sau phải rủ tui đó nhaaa."\n\n**Kiểu khen và đòi đi lần sau:**\n\n4.  "Ulatr nhìn phát mê liền! Lần sau cho xin một slot nhé 😍"\n5.  "Nhìn ảnh là biết chất lượng rồi. Lần sau làm cái review địa điểm cho tui tham khảo với nha 😉"\n6.  "Tuyệt vời ông mặt trời! Lần sau nhớ gọi hồn tôi theo."\n\n**Kiểu tếu táo, chọc ghẹo:**\n\n7.  "Nhìn mặt đứa nào cũng tươi rói vậy ta... chắc vui lắm ha! 😂"\n8.  "Toàn ảnh đẹp thôi! Mà sao không thấy ảnh đồ ăn nhiều vậy ta? 😋"\n9.  "Cháy phố quá! Chúc mừng quý zị đã thoát khỏi kiếp deadline thành công. ✨"\n\n**Kiểu ngắn gọn, súc tích:**\n\n10. "Đỉnh của chóp! 🔥"\n11. "Nhìn là thấy không khí rồi đó! Quá đã."\n12. "Quá đáng yêu! 😍"\n\nChọn cái nào hợp với mối quan hệ và cá tính của bạn nhất nha!',
+          },
+        ],
+        role: "model",
+      },
+      finishReason: "STOP",
+      index: 0,
+    },
+  ],
+  usageMetadata: {
+    promptTokenCount: 25,
+    candidatesTokenCount: 366,
+    totalTokenCount: 1682,
+    promptTokensDetails: [
+      {
+        modality: "TEXT",
+        tokenCount: 25,
+      },
+    ],
+    thoughtsTokenCount: 1291,
+  },
+  modelVersion: "gemini-2.5-flash",
+  responseId: "CeCsac6cDYnZ0-kP7dXukAg",
+};
+
 // Provider-specific API endpoints
 const API_ENDPOINTS = {
   openai: "https://api.openai.com/v1/chat/completions",
@@ -54,6 +89,28 @@ export class AICommunicator {
     console.log("[BoongAI AICommunicator] Model:", config.model);
     console.log("[BoongAI AICommunicator] Has API Key:", !!config.apiKey);
     console.log("[BoongAI AICommunicator] Timeout:", config.timeout);
+
+    // Mock mode - return hardcoded response without API call
+    if (MOCK_MODE) {
+      console.warn(
+        "[BoongAI AICommunicator] 🧪 MOCK MODE ENABLED - Returning hardcoded response",
+      );
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
+      const text = this.parseResponse(MOCK_RESPONSE, "gemini");
+      console.log(
+        "[BoongAI AICommunicator] ✅ Mock response:",
+        text.substring(0, 200) + "...",
+      );
+      console.log(
+        "[BoongAI AICommunicator] ========== MOCK REQUEST SUCCESS ==========",
+      );
+      return {
+        text,
+        provider: config.provider,
+        model: config.model,
+        timestamp: Date.now(),
+      };
+    }
 
     const maxRetries = 2;
     let lastError: Error | null = null;

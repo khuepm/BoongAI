@@ -304,34 +304,44 @@ async function handleAIResponse(message: AIResponseMessage): Promise<void> {
     }
 
     console.log(
-      "[BoongAI Content] ✅ AI response successful, generating reply...",
+      "[BoongAI Content] ✅ AI response successful, showing in Ghost UI...",
     );
-    // Attempt to generate and post the auto-reply
-    const replySuccess = await AutoInjector.generateReply(commentId, response);
 
-    if (replySuccess) {
+    // Remove processing indicator
+    GhostUIManager.remove(commentId);
+
+    // Show AI response in success Ghost UI with accept button
+    GhostUIManager.showSuccess(commentId, response, async () => {
       console.log(
-        "[BoongAI Content] ✅ Reply posted successfully, removing Ghost UI",
+        "[BoongAI Content] User accepted response, injecting to reply box...",
       );
-      GhostUIManager.remove(commentId);
-      pendingRequests.delete(commentId);
-    } else {
-      console.log("[BoongAI Content] ❌ Reply injection failed");
-      GhostUIManager.remove(commentId);
-      GhostUIManager.showError(
+
+      // Inject response to reply box
+      const replySuccess = await AutoInjector.generateReply(
         commentId,
-        "Could not post reply. Please try manually.",
+        response,
       );
-      pendingRequests.delete(commentId);
-    }
+
+      if (replySuccess) {
+        console.log("[BoongAI Content] ✅ Reply injected successfully");
+        pendingRequests.delete(commentId);
+      } else {
+        console.log("[BoongAI Content] ❌ Reply injection failed");
+        GhostUIManager.showError(
+          commentId,
+          "Could not inject reply. Please try manually.",
+        );
+        pendingRequests.delete(commentId);
+      }
+    });
   } catch (err) {
     console.error("[BoongAI Content] ❌ Error handling AI response:", err);
     GhostUIManager.remove(commentId);
     GhostUIManager.showError(
       commentId,
-      "Could not post reply. Please try manually.",
+      "An error occurred. Please try again.",
+      () => retryAIRequest(commentId),
     );
-    pendingRequests.delete(commentId);
   } finally {
     ErrorHandler.completeOperation(commentId);
     console.log(

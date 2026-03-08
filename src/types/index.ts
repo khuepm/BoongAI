@@ -116,7 +116,7 @@ export interface FacebookPost {
 
 export interface GhostUIState {
   commentId: string;
-  type: "processing" | "error";
+  type: "processing" | "error" | "success";
   message: string;
   element: HTMLElement;
   createdAt: number;
@@ -193,7 +193,7 @@ export interface ErrorContext {
 // Ghost UI Element
 export interface GhostUIElement {
   id: string;
-  type: "processing" | "error";
+  type: "processing" | "error" | "success";
   content: string;
   createdAt: number;
 }
