@@ -37,79 +37,268 @@ export class AutoInjector {
   ): Promise<boolean> {
     try {
       const startTime = Date.now();
+      console.log(
+        `[BoongAI AutoInjector] ========== STARTING REPLY INJECTION ==========`,
+      );
+      console.log(`[BoongAI AutoInjector] Comment ID: ${commentId}`);
+      console.log(
+        `[BoongAI AutoInjector] Response length: ${aiResponse.length}`,
+      );
 
       // Step 1: Find reply button
+      console.log("[BoongAI AutoInjector] Step 1: Finding reply button...");
       const replyButton = this.findReplyButton(commentId);
       if (!replyButton) {
-        console.error("[BoongAI] Reply button not found");
+        console.error(
+          "[BoongAI AutoInjector] ❌ Reply button not found for comment:",
+          commentId,
+        );
+        console.error(
+          "[BoongAI AutoInjector] Comment element exists:",
+          !!document.querySelector(`[data-boongai-comment-id="${commentId}"]`),
+        );
         return false;
       }
+      console.log("[BoongAI AutoInjector] ✅ Reply button found:", replyButton);
+
+      // Step 1.5: Track existing contenteditable elements before clicking
+      const existingEditables = new Set<Element>(
+        Array.from(document.querySelectorAll('[contenteditable="true"]')),
+      );
+      console.log(
+        "[BoongAI AutoInjector] Existing contenteditable count:",
+        existingEditables.size,
+      );
 
       // Step 2: Click reply button to open input field
+      console.log("[BoongAI AutoInjector] Step 2: Clicking reply button...");
       await this.clickReplyButton(replyButton);
+      console.log("[BoongAI AutoInjector] ✅ Reply button clicked");
 
-      // Step 3: Short delay for input field to appear
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Step 3: Wait for input field to appear
+      console.log(
+        "[BoongAI AutoInjector] Step 3: Waiting for input field to appear...",
+      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Step 4: Find the reply input field
-      const inputField = this.findReplyInputField(commentId);
+      // Step 4: Find the reply input field (newly appeared)
+      console.log(
+        "[BoongAI AutoInjector] Step 4: Finding reply input field...",
+      );
+      const inputField = this.findReplyInputField(commentId, existingEditables);
       if (!inputField) {
-        console.error("[BoongAI] Reply input field not found");
+        console.error("[BoongAI AutoInjector] ❌ Reply input field not found");
+        console.error(
+          "[BoongAI AutoInjector] Available contenteditable elements:",
+          document.querySelectorAll('[contenteditable="true"]').length,
+        );
         return false;
       }
+      console.log("[BoongAI AutoInjector] ✅ Input field found:", inputField);
 
       // Step 5: Inject AI response text (without auto-submit)
+      console.log("[BoongAI AutoInjector] Step 5: Injecting text...");
       await this.injectText(inputField, aiResponse);
+      console.log("[BoongAI AutoInjector] ✅ Text injected");
 
       // Focus the input field so user can see and edit the response
       inputField.focus();
+      console.log("[BoongAI AutoInjector] ✅ Input field focused");
 
       // Scroll input field into view
       inputField.scrollIntoView({ behavior: "smooth", block: "center" });
+      console.log("[BoongAI AutoInjector] ✅ Input field scrolled into view");
 
       const totalTime = Date.now() - startTime;
       console.log(
-        `[BoongAI] Reply text injected successfully in ${totalTime}ms (user can now review and submit)`,
+        `[BoongAI AutoInjector] ========== REPLY INJECTION SUCCESS (${totalTime}ms) ==========`,
       );
       return true;
     } catch (error) {
-      console.error("[BoongAI] Error injecting reply:", error);
+      console.error("[BoongAI AutoInjector] ❌ Error injecting reply:", error);
+      console.error(
+        "[BoongAI AutoInjector] Error stack:",
+        (error as Error).stack,
+      );
       return false;
     }
   }
 
-  private static findReplyInputField(commentId: string): HTMLElement | null {
-    // Find the comment element
+  private static findReplyInputField(
+    commentId: string,
+    existingEditables: Set<Element>,
+  ): HTMLElement | null {
+    console.log("[BoongAI AutoInjector] Searching for reply input field...");
+
+    // Find the comment element to establish proximity
     const commentElement = document.querySelector(
       `[data-boongai-comment-id="${commentId}"]`,
     );
     if (!commentElement) {
+      console.error("[BoongAI AutoInjector] Comment element not found");
       return null;
     }
 
-    // Look for reply input field near the comment
-    const container =
-      commentElement.closest('[role="article"]') ||
-      commentElement.parentElement;
-    if (!container) {
-      return null;
-    }
+    // Strategy 1: Find newly appeared contenteditable elements
+    const allEditables = document.querySelectorAll('[contenteditable="true"]');
+    console.log(
+      "[BoongAI AutoInjector] Total contenteditable elements:",
+      allEditables.length,
+    );
+    console.log(
+      "[BoongAI AutoInjector] Existing elements:",
+      existingEditables.size,
+    );
 
-    // Try multiple selectors for input field
-    const selectors = [
-      '[contenteditable="true"]',
-      'textarea[placeholder*="reply"]',
-      'textarea[placeholder*="comment"]',
-      'div[role="textbox"]',
-      'input[type="text"]',
-    ];
-
-    for (const selector of selectors) {
-      const inputs = container.querySelectorAll(selector);
-      // Get the last one (most recently added, which should be the reply field)
-      if (inputs.length > 0) {
-        return inputs[inputs.length - 1] as HTMLElement;
+    const newEditables: HTMLElement[] = [];
+    allEditables.forEach((editable) => {
+      if (!existingEditables.has(editable)) {
+        newEditables.push(editable as HTMLElement);
       }
+    });
+
+    console.log(
+      "[BoongAI AutoInjector] Newly appeared editables:",
+      newEditables.length,
+    );
+
+    // Strategy 2: Among new editables, find the one closest to the comment
+    if (newEditables.length > 0) {
+      let closestEditable: HTMLElement | null = null;
+      let minDistance = Infinity;
+
+      for (const editable of newEditables) {
+        const distance = this.getElementDistance(commentElement, editable);
+        console.log(
+          "[BoongAI AutoInjector] New editable distance:",
+          distance,
+          editable,
+        );
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestEditable = editable;
+        }
+      }
+
+      if (closestEditable) {
+        console.log(
+          "[BoongAI AutoInjector] Selected closest new editable:",
+          closestEditable,
+        );
+        return closestEditable;
+      }
+    }
+
+    // Strategy 3: If no new editables, find focused or empty editable near comment
+    console.log(
+      "[BoongAI AutoInjector] No new editables, searching for focused/empty near comment...",
+    );
+    const nearbyEditables: Array<{ element: HTMLElement; distance: number }> =
+      [];
+
+    allEditables.forEach((editable) => {
+      const distance = this.getElementDistance(
+        commentElement,
+        editable as HTMLElement,
+      );
+      if (distance < 5000) {
+        // Within reasonable DOM distance
+        nearbyEditables.push({ element: editable as HTMLElement, distance });
+      }
+    });
+
+    // Sort by distance
+    nearbyEditables.sort((a, b) => a.distance - b.distance);
+    console.log(
+      "[BoongAI AutoInjector] Nearby editables:",
+      nearbyEditables.length,
+    );
+
+    // Find focused or empty among nearby
+    for (const { element } of nearbyEditables) {
+      const text = element.textContent?.trim() || "";
+      const isFocused = document.activeElement === element;
+      const isEmpty = text.length === 0;
+
+      console.log("[BoongAI AutoInjector] Checking nearby:", {
+        isEmpty,
+        isFocused,
+        text: text.substring(0, 30),
+      });
+
+      if (isFocused || isEmpty) {
+        console.log(
+          "[BoongAI AutoInjector] Selected nearby editable:",
+          element,
+        );
+        return element;
+      }
+    }
+
+    // Fallback: return closest nearby editable
+    if (nearbyEditables.length > 0) {
+      console.log(
+        "[BoongAI AutoInjector] Using closest nearby as fallback:",
+        nearbyEditables[0].element,
+      );
+      return nearbyEditables[0].element;
+    }
+
+    console.error("[BoongAI AutoInjector] No suitable input field found");
+    return null;
+  }
+
+  /**
+   * Calculate DOM distance between two elements using TreeWalker
+   */
+  private static getElementDistance(from: Element, to: Element): number {
+    // Find common ancestor
+    const commonAncestor = this.findCommonAncestor(from, to);
+    if (!commonAncestor) return Infinity;
+
+    const walker = document.createTreeWalker(
+      commonAncestor,
+      NodeFilter.SHOW_ELEMENT,
+    );
+    let fromPos = -1;
+    let toPos = -1;
+    let pos = 0;
+
+    let node: Node | null = walker.currentNode;
+    while (node) {
+      if (node === from) fromPos = pos;
+      if (node === to) toPos = pos;
+      if (fromPos >= 0 && toPos >= 0) break;
+      node = walker.nextNode();
+      pos++;
+    }
+
+    if (fromPos < 0 || toPos < 0) return Infinity;
+    return Math.abs(fromPos - toPos);
+  }
+
+  /**
+   * Find common ancestor of two elements
+   */
+  private static findCommonAncestor(
+    elem1: Element,
+    elem2: Element,
+  ): Element | null {
+    const ancestors1 = new Set<Element>();
+    let current: Element | null = elem1;
+
+    while (current) {
+      ancestors1.add(current);
+      current = current.parentElement;
+    }
+
+    current = elem2;
+    while (current) {
+      if (ancestors1.has(current)) {
+        return current;
+      }
+      current = current.parentElement;
     }
 
     return null;
@@ -330,35 +519,25 @@ export class AutoInjector {
   ): Promise<void> {
     // Format the text with prefix and preserve line breaks
     const formattedText = this.formatReply(text);
+    console.log(
+      "[BoongAI AutoInjector] Formatted text length:",
+      formattedText.length,
+    );
+    console.log(
+      "[BoongAI AutoInjector] Formatted text preview:",
+      formattedText.substring(0, 100),
+    );
 
     try {
-      // Method 1: Try clipboard API (most reliable for Facebook)
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(formattedText);
-
-        // Focus the input field
-        inputField.focus();
-
-        // Trigger paste event
-        const pasteEvent = new ClipboardEvent("paste", {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: new DataTransfer(),
-        });
-
-        // Add text to clipboard data
-        pasteEvent.clipboardData?.setData("text/plain", formattedText);
-        inputField.dispatchEvent(pasteEvent);
-
-        // Wait for paste to complete
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      } else {
-        // Fallback: Direct DOM manipulation
-        await this.injectTextDirectly(inputField, formattedText);
-      }
+      // Method 1: Direct DOM manipulation (most reliable for Facebook contenteditable)
+      console.log("[BoongAI AutoInjector] Using direct DOM injection...");
+      await this.injectTextDirectly(inputField, formattedText);
+      console.log("[BoongAI AutoInjector] Direct injection complete");
 
       // Trigger React/Facebook events for compatibility
+      console.log("[BoongAI AutoInjector] Triggering input events...");
       this.triggerInputEvents(inputField, formattedText);
+      console.log("[BoongAI AutoInjector] Input events triggered");
     } catch (error) {
       console.error(
         "[BoongAI] Clipboard API failed, using direct injection:",

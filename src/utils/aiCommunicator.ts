@@ -8,7 +8,7 @@ import {
 } from "@/types";
 
 // Mock mode for testing - set to true to bypass API calls
-const MOCK_MODE = true;
+const MOCK_MODE = false;
 
 // Mock response data
 const MOCK_RESPONSE = {
@@ -271,6 +271,8 @@ export class AICommunicator {
 - Trả lời câu hỏi của người dùng dựa trên nội dung bài viết được cung cấp
 - Đưa ra câu trả lời ngắn gọn, súc tích, dễ hiểu
 - Sử dụng tiếng Việt tự nhiên, thân thiện
+- KHÔNG bao gồm lời chào hỏi, tên người dùng, hoặc bất kỳ phần mở đầu/kết thúc nào (ví dụ: "Chào [tên]", "Xin chào", "Hy vọng giúp ích cho bạn")
+- Đi thẳng vào câu trả lời, không dài dòng
 - Nếu không có đủ thông tin, hãy nói rõ thay vì đoán mò
 - Tránh lặp lại nội dung bài viết, chỉ trích xuất thông tin cần thiết`;
   }
