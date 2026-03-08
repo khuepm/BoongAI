@@ -21,67 +21,76 @@ export class AutoInjector {
       return 0;
     }
     const remainingMin = targetMin - elapsedMs - submitDelay;
-    const remainingMax = Math.min(targetMax - elapsedMs - submitDelay, remainingMin + 1000);
-    return Math.floor(Math.random() * (remainingMax - remainingMin + 1)) + remainingMin;
+    const remainingMax = Math.min(
+      targetMax - elapsedMs - submitDelay,
+      remainingMin + 1000,
+    );
+    return (
+      Math.floor(Math.random() * (remainingMax - remainingMin + 1)) +
+      remainingMin
+    );
   }
 
-  static async generateReply(commentId: string, aiResponse: string): Promise<boolean> {
+  static async generateReply(
+    commentId: string,
+    aiResponse: string,
+  ): Promise<boolean> {
     try {
       const startTime = Date.now();
 
       // Step 1: Find reply button
       const replyButton = this.findReplyButton(commentId);
       if (!replyButton) {
-        console.error('[BoongAI] Reply button not found');
+        console.error("[BoongAI] Reply button not found");
         return false;
       }
 
       // Step 2: Click reply button to open input field
       await this.clickReplyButton(replyButton);
 
-      // Step 3: Randomized humanization delay (500ms - 1500ms) between opening input and injecting text
-      // Uses Math.random() to simulate natural human interaction and avoid Facebook bot detection
-      const humanDelay = this.generateHumanizationDelay();
-      await new Promise(resolve => setTimeout(resolve, humanDelay));
+      // Step 3: Short delay for input field to appear
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       // Step 4: Find the reply input field
       const inputField = this.findReplyInputField(commentId);
       if (!inputField) {
-        console.error('[BoongAI] Reply input field not found');
+        console.error("[BoongAI] Reply input field not found");
         return false;
       }
 
-      // Step 5: Inject AI response text
+      // Step 5: Inject AI response text (without auto-submit)
       await this.injectText(inputField, aiResponse);
 
-      // Step 6: Pre-submit delay to bring total time into 3-5 second range for natural pacing
-      const elapsed = Date.now() - startTime;
-      const extraDelay = this.calculatePreSubmitDelay(elapsed);
-      if (extraDelay > 0) {
-        await new Promise(resolve => setTimeout(resolve, extraDelay));
-      }
+      // Focus the input field so user can see and edit the response
+      inputField.focus();
 
-      // Step 7: Submit the reply
-      await this.submitReply(inputField);
+      // Scroll input field into view
+      inputField.scrollIntoView({ behavior: "smooth", block: "center" });
 
       const totalTime = Date.now() - startTime;
-      console.log(`[BoongAI] Reply generated successfully in ${totalTime}ms`);
+      console.log(
+        `[BoongAI] Reply text injected successfully in ${totalTime}ms (user can now review and submit)`,
+      );
       return true;
     } catch (error) {
-      console.error('[BoongAI] Error generating reply:', error);
+      console.error("[BoongAI] Error injecting reply:", error);
       return false;
     }
   }
 
   private static findReplyInputField(commentId: string): HTMLElement | null {
     // Find the comment element
-    const commentElement = document.querySelector(`[data-boongai-comment-id="${commentId}"]`);
+    const commentElement = document.querySelector(
+      `[data-boongai-comment-id="${commentId}"]`,
+    );
     if (!commentElement) {
       return null;
     }
 
     // Look for reply input field near the comment
-    const container = commentElement.closest('[role="article"]') || commentElement.parentElement;
+    const container =
+      commentElement.closest('[role="article"]') ||
+      commentElement.parentElement;
     if (!container) {
       return null;
     }
@@ -92,7 +101,7 @@ export class AutoInjector {
       'textarea[placeholder*="reply"]',
       'textarea[placeholder*="comment"]',
       'div[role="textbox"]',
-      'input[type="text"]'
+      'input[type="text"]',
     ];
 
     for (const selector of selectors) {
@@ -108,7 +117,9 @@ export class AutoInjector {
 
   static findReplyButton(commentId: string): HTMLElement | null {
     // Step 1: Find the comment element by data attribute
-    const commentElement = document.querySelector(`[data-boongai-comment-id="${commentId}"]`);
+    const commentElement = document.querySelector(
+      `[data-boongai-comment-id="${commentId}"]`,
+    );
     if (!commentElement) {
       console.error(`[BoongAI] Comment element not found for ID: ${commentId}`);
       return null;
@@ -135,12 +146,16 @@ export class AutoInjector {
     const containerSelectors = [
       '[role="article"]',
       '[data-testid*="comment"]',
-      'li',
-      '.comment',
+      "li",
+      ".comment",
     ];
 
     // First, try to find the reply button directly inside the comment element itself
-    const directMatch = this.findReplyButtonInContainer(commentElement, replyButtonSelectors, replyTextPatterns);
+    const directMatch = this.findReplyButtonInContainer(
+      commentElement,
+      replyButtonSelectors,
+      replyTextPatterns,
+    );
     if (directMatch) {
       return directMatch;
     }
@@ -152,8 +167,15 @@ export class AutoInjector {
       const container = commentElement.closest(containerSelector);
       if (!container) continue;
 
-      const candidate = this.findReplyButtonInContainer(container, replyButtonSelectors, replyTextPatterns);
-      if (candidate && this.isClosestReplyButton(candidate, commentElement, container)) {
+      const candidate = this.findReplyButtonInContainer(
+        container,
+        replyButtonSelectors,
+        replyTextPatterns,
+      );
+      if (
+        candidate &&
+        this.isClosestReplyButton(candidate, commentElement, container)
+      ) {
         return candidate;
       }
     }
@@ -161,8 +183,15 @@ export class AutoInjector {
     // Step 4: Fallback — check immediate parent chain (up to 5 levels)
     let current: Element | null = commentElement.parentElement;
     for (let depth = 0; depth < 5 && current; depth++) {
-      const candidate = this.findReplyButtonInContainer(current, replyButtonSelectors, replyTextPatterns);
-      if (candidate && this.isClosestReplyButton(candidate, commentElement, current)) {
+      const candidate = this.findReplyButtonInContainer(
+        current,
+        replyButtonSelectors,
+        replyTextPatterns,
+      );
+      if (
+        candidate &&
+        this.isClosestReplyButton(candidate, commentElement, current)
+      ) {
         return candidate;
       }
       current = current.parentElement;
@@ -179,7 +208,7 @@ export class AutoInjector {
   private static findReplyButtonInContainer(
     container: Element,
     selectors: string[],
-    textPatterns: RegExp[]
+    textPatterns: RegExp[],
   ): HTMLElement | null {
     // Try CSS selectors first
     for (const selector of selectors) {
@@ -190,9 +219,11 @@ export class AutoInjector {
     }
 
     // Fallback: text-based matching for spans/divs that contain "Reply" or "Trả lời"
-    const candidates = container.querySelectorAll('span, div[role="button"], a');
+    const candidates = container.querySelectorAll(
+      'span, div[role="button"], a',
+    );
     for (const candidate of Array.from(candidates)) {
-      const text = candidate.textContent?.trim() ?? '';
+      const text = candidate.textContent?.trim() ?? "";
       for (const pattern of textPatterns) {
         if (pattern.test(text)) {
           return candidate as HTMLElement;
@@ -212,10 +243,10 @@ export class AutoInjector {
   private static isClosestReplyButton(
     button: Element,
     commentElement: Element,
-    container: Element
+    container: Element,
   ): boolean {
     // Find all comment elements within this container
-    const allComments = container.querySelectorAll('[data-boongai-comment-id]');
+    const allComments = container.querySelectorAll("[data-boongai-comment-id]");
     if (allComments.length <= 1) {
       // Only one comment in this container — the button must belong to it
       return true;
@@ -253,8 +284,15 @@ export class AutoInjector {
    * Calculate a simple DOM distance between two elements within a container.
    * Uses document-order position via TreeWalker as a proxy for structural proximity.
    */
-  private static domDistance(a: Element, b: Element, container: Element): number {
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
+  private static domDistance(
+    a: Element,
+    b: Element,
+    container: Element,
+  ): number {
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_ELEMENT,
+    );
     let posA = -1;
     let posB = -1;
     let index = 0;
@@ -274,19 +312,22 @@ export class AutoInjector {
 
   static async clickReplyButton(button: HTMLElement): Promise<void> {
     // Simulate native browser events to bypass Facebook protections
-    const clickEvent = new MouseEvent('click', {
+    const clickEvent = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
-      view: window
+      view: window,
     });
 
     button.dispatchEvent(clickEvent);
 
     // Wait for reply input field to appear (100-200ms delay)
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
   }
 
-  static async injectText(inputField: HTMLElement, text: string): Promise<void> {
+  static async injectText(
+    inputField: HTMLElement,
+    text: string,
+  ): Promise<void> {
     // Format the text with prefix and preserve line breaks
     const formattedText = this.formatReply(text);
 
@@ -294,23 +335,23 @@ export class AutoInjector {
       // Method 1: Try clipboard API (most reliable for Facebook)
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(formattedText);
-        
+
         // Focus the input field
         inputField.focus();
-        
+
         // Trigger paste event
-        const pasteEvent = new ClipboardEvent('paste', {
+        const pasteEvent = new ClipboardEvent("paste", {
           bubbles: true,
           cancelable: true,
-          clipboardData: new DataTransfer()
+          clipboardData: new DataTransfer(),
         });
-        
+
         // Add text to clipboard data
-        pasteEvent.clipboardData?.setData('text/plain', formattedText);
+        pasteEvent.clipboardData?.setData("text/plain", formattedText);
         inputField.dispatchEvent(pasteEvent);
-        
+
         // Wait for paste to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } else {
         // Fallback: Direct DOM manipulation
         await this.injectTextDirectly(inputField, formattedText);
@@ -318,56 +359,72 @@ export class AutoInjector {
 
       // Trigger React/Facebook events for compatibility
       this.triggerInputEvents(inputField, formattedText);
-      
     } catch (error) {
-      console.error('[BoongAI] Clipboard API failed, using direct injection:', error);
+      console.error(
+        "[BoongAI] Clipboard API failed, using direct injection:",
+        error,
+      );
       // Fallback to direct DOM manipulation
       await this.injectTextDirectly(inputField, formattedText);
       this.triggerInputEvents(inputField, formattedText);
     }
   }
 
-  private static async injectTextDirectly(inputField: HTMLElement, text: string): Promise<void> {
+  private static async injectTextDirectly(
+    inputField: HTMLElement,
+    text: string,
+  ): Promise<void> {
     // Check if it's a contenteditable element (Facebook uses these)
     // Also check the attribute directly for environments where isContentEditable is not implemented
-    if (inputField.isContentEditable || inputField.getAttribute('contenteditable') === 'true') {
+    if (
+      inputField.isContentEditable ||
+      inputField.getAttribute("contenteditable") === "true"
+    ) {
       inputField.textContent = text;
-    } else if (inputField instanceof HTMLInputElement || inputField instanceof HTMLTextAreaElement) {
+    } else if (
+      inputField instanceof HTMLInputElement ||
+      inputField instanceof HTMLTextAreaElement
+    ) {
       inputField.value = text;
     } else {
       // Try to find the actual input element within the container
-      const actualInput = inputField.querySelector('[contenteditable="true"]') as HTMLElement;
+      const actualInput = inputField.querySelector(
+        '[contenteditable="true"]',
+      ) as HTMLElement;
       if (actualInput) {
         actualInput.textContent = text;
       } else {
-        throw new Error('Could not find editable element');
+        throw new Error("Could not find editable element");
       }
     }
   }
 
-  private static triggerInputEvents(inputField: HTMLElement, text: string): void {
+  private static triggerInputEvents(
+    inputField: HTMLElement,
+    text: string,
+  ): void {
     // Trigger input event for React
-    const inputEvent = new InputEvent('input', {
+    const inputEvent = new InputEvent("input", {
       bubbles: true,
       cancelable: true,
       data: text,
-      inputType: 'insertText'
+      inputType: "insertText",
     });
     inputField.dispatchEvent(inputEvent);
 
     // Trigger change event
-    const changeEvent = new Event('change', {
+    const changeEvent = new Event("change", {
       bubbles: true,
-      cancelable: true
+      cancelable: true,
     });
     inputField.dispatchEvent(changeEvent);
 
     // Trigger keydown event (some frameworks need this)
-    const keydownEvent = new KeyboardEvent('keydown', {
+    const keydownEvent = new KeyboardEvent("keydown", {
       bubbles: true,
       cancelable: true,
-      key: 'a',
-      code: 'KeyA'
+      key: "a",
+      code: "KeyA",
     });
     inputField.dispatchEvent(keydownEvent);
   }
@@ -376,57 +433,59 @@ export class AutoInjector {
     // Method 1: Try to find and click the submit button
     const submitButton = this.findSubmitButton(inputField);
     if (submitButton) {
-      const clickEvent = new MouseEvent('click', {
+      const clickEvent = new MouseEvent("click", {
         bubbles: true,
         cancelable: true,
-        view: window
+        view: window,
       });
       submitButton.dispatchEvent(clickEvent);
-      
+
       // Wait for submission to complete
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       return;
     }
 
     // Method 2: Simulate Enter key press
-    const enterEvent = new KeyboardEvent('keydown', {
+    const enterEvent = new KeyboardEvent("keydown", {
       bubbles: true,
       cancelable: true,
-      key: 'Enter',
-      code: 'Enter',
+      key: "Enter",
+      code: "Enter",
       keyCode: 13,
-      which: 13
+      which: 13,
     });
     inputField.dispatchEvent(enterEvent);
 
     // Also trigger keypress and keyup for compatibility
-    const keypressEvent = new KeyboardEvent('keypress', {
+    const keypressEvent = new KeyboardEvent("keypress", {
       bubbles: true,
       cancelable: true,
-      key: 'Enter',
-      code: 'Enter',
+      key: "Enter",
+      code: "Enter",
       keyCode: 13,
-      which: 13
+      which: 13,
     });
     inputField.dispatchEvent(keypressEvent);
 
-    const keyupEvent = new KeyboardEvent('keyup', {
+    const keyupEvent = new KeyboardEvent("keyup", {
       bubbles: true,
       cancelable: true,
-      key: 'Enter',
-      code: 'Enter',
+      key: "Enter",
+      code: "Enter",
       keyCode: 13,
-      which: 13
+      which: 13,
     });
     inputField.dispatchEvent(keyupEvent);
 
     // Wait for submission to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
   private static findSubmitButton(inputField: HTMLElement): HTMLElement | null {
     // Find the submit button near the input field
-    const container = inputField.closest('[role="dialog"], [role="article"], form, .comment-form');
+    const container = inputField.closest(
+      '[role="dialog"], [role="article"], form, .comment-form',
+    );
     if (!container) {
       return null;
     }
@@ -439,7 +498,7 @@ export class AutoInjector {
       'button[aria-label*="Comment"]',
       'button[aria-label*="Reply"]',
       '[data-testid*="submit"]',
-      '[data-testid*="post"]'
+      '[data-testid*="post"]',
     ];
 
     for (const selector of selectors) {
@@ -455,94 +514,107 @@ export class AutoInjector {
   static formatReply(aiResponse: string): string {
     // First, sanitize the content
     let sanitized = this.sanitizeContent(aiResponse);
-    
+
     // Remove unsupported markdown formatting
     sanitized = this.removeUnsupportedMarkdown(sanitized);
-    
+
     // Add prefix
     let formatted = `[🤖 BoongAI trả lời]: ${sanitized}`;
-    
+
     // Truncate if exceeds 8000 characters
     if (formatted.length > 8000) {
-      formatted = formatted.substring(0, 8000) + '... (nội dung đã được rút gọn)';
+      formatted =
+        formatted.substring(0, 8000) + "... (nội dung đã được rút gọn)";
     }
-    
+
     return formatted;
   }
 
   static sanitizeContent(content: string): string {
     // Remove malicious scripts and HTML injection attempts
     let sanitized = content;
-    
+
     // Remove script tags (case-insensitive, handles various formats)
-    sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    
+    sanitized = sanitized.replace(
+      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+      "",
+    );
+
     // Remove event handlers (onclick, onerror, onload, etc.)
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
-    
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, "");
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, "");
+
     // Remove javascript: protocol
-    sanitized = sanitized.replace(/javascript:/gi, '');
-    
+    sanitized = sanitized.replace(/javascript:/gi, "");
+
     // Remove data: URLs that could contain scripts
-    sanitized = sanitized.replace(/data:text\/html[^"'\s]*/gi, '');
-    
+    sanitized = sanitized.replace(/data:text\/html[^"'\s]*/gi, "");
+
     // Remove iframe tags
-    sanitized = sanitized.replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
-    
+    sanitized = sanitized.replace(
+      /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
+      "",
+    );
+
     // Remove object and embed tags
-    sanitized = sanitized.replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '');
-    sanitized = sanitized.replace(/<embed\b[^>]*>/gi, '');
-    
+    sanitized = sanitized.replace(
+      /<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi,
+      "",
+    );
+    sanitized = sanitized.replace(/<embed\b[^>]*>/gi, "");
+
     // Remove form tags
-    sanitized = sanitized.replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '');
-    
+    sanitized = sanitized.replace(
+      /<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi,
+      "",
+    );
+
     // Remove meta tags
-    sanitized = sanitized.replace(/<meta\b[^>]*>/gi, '');
-    
+    sanitized = sanitized.replace(/<meta\b[^>]*>/gi, "");
+
     return sanitized;
   }
 
   private static removeUnsupportedMarkdown(content: string): string {
     // Facebook doesn't support most markdown, so we remove it
     let cleaned = content;
-    
+
     // Remove markdown headers (# ## ###)
-    cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
-    
+    cleaned = cleaned.replace(/^#{1,6}\s+/gm, "");
+
     // Remove markdown bold (**text** or __text__)
-    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
-    cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
-    
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, "$1");
+    cleaned = cleaned.replace(/__([^_]+)__/g, "$1");
+
     // Remove markdown italic (*text* or _text_)
-    cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1');
-    cleaned = cleaned.replace(/_([^_]+)_/g, '$1');
-    
+    cleaned = cleaned.replace(/\*([^*]+)\*/g, "$1");
+    cleaned = cleaned.replace(/_([^_]+)_/g, "$1");
+
     // Remove markdown code blocks (```code```)
     cleaned = cleaned.replace(/```[\s\S]*?```/g, (match) => {
       // Extract code content without backticks
-      return match.replace(/```\w*\n?/g, '').replace(/```/g, '');
+      return match.replace(/```\w*\n?/g, "").replace(/```/g, "");
     });
-    
+
     // Remove inline code (`code`)
-    cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
-    
+    cleaned = cleaned.replace(/`([^`]+)`/g, "$1");
+
     // Remove markdown links [text](url) - keep only text
-    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    
+    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+
     // Remove markdown images ![alt](url)
-    cleaned = cleaned.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
-    
+    cleaned = cleaned.replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1");
+
     // Remove markdown horizontal rules (---, ***, ___)
-    cleaned = cleaned.replace(/^[\-*_]{3,}\s*$/gm, '');
-    
+    cleaned = cleaned.replace(/^[\-*_]{3,}\s*$/gm, "");
+
     // Remove markdown blockquotes (> text)
-    cleaned = cleaned.replace(/^>\s+/gm, '');
-    
+    cleaned = cleaned.replace(/^>\s+/gm, "");
+
     // Remove markdown list markers (-, *, +, 1.)
-    cleaned = cleaned.replace(/^[\s]*[-*+]\s+/gm, '');
-    cleaned = cleaned.replace(/^[\s]*\d+\.\s+/gm, '');
-    
+    cleaned = cleaned.replace(/^[\s]*[-*+]\s+/gm, "");
+    cleaned = cleaned.replace(/^[\s]*\d+\.\s+/gm, "");
+
     return cleaned;
   }
 }
