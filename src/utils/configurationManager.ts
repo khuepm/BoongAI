@@ -33,6 +33,14 @@ export class ConfigurationManager {
 
   static async saveConfig(config: Partial<ExtensionConfig>): Promise<void> {
     return new Promise((resolve) => {
+      chrome.storage.local.set(config, () => {
+        resolve();
+      });
+    });
+  }
+
+  static async saveConfigDebounced(config: Partial<ExtensionConfig>): Promise<void> {
+    return new Promise((resolve) => {
       if (this.debounceTimer) {
         clearTimeout(this.debounceTimer);
       }

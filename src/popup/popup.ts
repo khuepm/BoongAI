@@ -15,9 +15,13 @@ class PopupUI {
   private settingsView!: HTMLElement;
   private guideView!: HTMLElement;
   private backButton!: HTMLButtonElement;
+  private testConnectionBtn!: HTMLButtonElement;
+  private guideSection!: HTMLElement;
+  private closeGuideBtn!: HTMLButtonElement;
   private openProviderSiteBtn!: HTMLButtonElement;
   private guideContent!: HTMLElement;
   private providerNameSpan!: HTMLElement;
+  private providerNameInlineSpan!: HTMLElement;
   private currentConfig: ExtensionConfig | null = null;
   private validationTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -30,22 +34,27 @@ class PopupUI {
     this.togglePasswordIcon = document.getElementById('toggle-password-icon') as HTMLElement;
     this.connectionIndicator = document.getElementById('connection-indicator') as HTMLElement;
     this.validationError = document.getElementById('validation-error') as HTMLElement;
-    this.apiGuideLink = document.getElementById('api-guide-link') as HTMLAnchorElement;
-    this.apiGuideModal = document.getElementById('api-guide-modal') as HTMLElement;
-    this.closeModalBtn = document.getElementById('close-modal') as HTMLButtonElement;
+    this.testConnectionBtn = document.getElementById('test-connection') as HTMLButtonElement;
+    this.guideSection = document.getElementById('guide-section') as HTMLElement;
+    this.closeGuideBtn = document.getElementById('close-guide') as HTMLButtonElement;
     this.openProviderSiteBtn = document.getElementById('open-provider-site') as HTMLButtonElement;
     this.guideContent = document.getElementById('guide-content') as HTMLElement;
     this.providerNameSpan = document.getElementById('provider-name') as HTMLElement;
+    this.providerNameInlineSpan = document.getElementById('provider-name-inline') as HTMLElement;
   }
 
   async initialize(): Promise<void> {
+    console.log('[BoongAI Popup] Initializing popup UI...');
     await this.loadConfiguration();
     this.setupEventListeners();
     this.updateFloatingLabels();
+    console.log('[BoongAI Popup] Popup UI initialized successfully');
   }
 
   private async loadConfiguration(): Promise<void> {
+    console.log('[BoongAI Popup] Loading configuration...');
     this.currentConfig = await ConfigurationManager.loadConfig();
+    console.log('[BoongAI Popup] Configuration loaded:', this.currentConfig);
 
     this.activeToggle.checked = this.currentConfig.masterSwitch;
     this.providerSelect.value = this.currentConfig.aiProvider;
@@ -71,40 +80,42 @@ class PopupUI {
         this.updateConnectionIndicator(true);
       }
     }
+    
+    console.log('[BoongAI Popup] Configuration loaded successfully');
   }
 
   private setupEventListeners(): void {
+    console.log('[BoongAI Popup] Setting up event listeners...');
+    
     this.activeToggle.addEventListener('change', () => this.handleMasterSwitchToggle());
-    this.providerSelect.addEventListener('change', () => this.handleProviderSelection());
+    console.log('[BoongAI Popup] Master switch listener added');
+    
+    this.providerSelect.addEventListener('change', () => {
+      console.log('[BoongAI Popup] Provider select change event fired');
+      this.handleProviderSelection();
+    });
+    console.log('[BoongAI Popup] Provider select listener added');
+    
     this.modelSelect.addEventListener('change', () => this.handleModelSelection());
+    console.log('[BoongAI Popup] Model select listener added');
+    
     this.apiKeyInput.addEventListener('input', () => this.handleApiKeyInput());
     this.togglePasswordBtn.addEventListener('click', () => this.togglePasswordVisibility());
+    this.testConnectionBtn.addEventListener('click', () => this.handleTestConnection());
     this.apiGuideLink.addEventListener('click', (e) => {
       e.preventDefault();
-      this.showApiGuideModal();
+      this.showApiGuide();
     });
-    this.closeModalBtn.addEventListener('click', () => this.hideApiGuideModal());
+    this.closeGuideBtn.addEventListener('click', () => this.hideApiGuide());
     this.openProviderSiteBtn.addEventListener('click', () => this.openProviderSite());
-    
-    // Close modal when clicking outside
-    this.apiGuideModal.addEventListener('click', (e) => {
-      if (e.target === this.apiGuideModal) {
-        this.hideApiGuideModal();
-      }
-    });
-
-    // Close modal with Escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !this.apiGuideModal.classList.contains('hidden')) {
-        this.hideApiGuideModal();
-      }
-    });
 
     // Keep floating labels in sync
     [this.providerSelect, this.modelSelect, this.apiKeyInput].forEach(el => {
       el.addEventListener('input', () => this.updateFloatingLabels());
       el.addEventListener('change', () => this.updateFloatingLabels());
     });
+    
+    console.log('[BoongAI Popup] All event listeners set up successfully');
   }
 
   private async handleMasterSwitchToggle(): Promise<void> {
@@ -117,16 +128,21 @@ class PopupUI {
 
   private handleProviderSelection(): void {
     const provider = this.providerSelect.value as AIProvider;
+    console.log('[BoongAI Popup] Provider changed to:', provider);
+    
     this.updateModelList(provider);
+    console.log('[BoongAI Popup] Model list updated, current model:', this.modelSelect.value);
+    
     this.saveConfiguration({ aiProvider: provider, model: this.modelSelect.value });
 
     // Reset validation state when provider changes
     this.updateConnectionIndicator(null);
     this.hideValidationError();
 
-    // Update modal content if it's currently open
-    if (!this.apiGuideModal.classList.contains('hidden')) {
+    // Update guide content if it's currently open
+    if (this.guideSection.classList.contains('expanded')) {
       this.updateGuideContent(provider);
+      this.providerNameInlineSpan.textContent = this.getProviderDisplayName(provider);
       this.providerNameSpan.textContent = this.getProviderDisplayName(provider);
     }
   }
@@ -140,6 +156,21 @@ class PopupUI {
     this.updateConnectionIndicator(null);
     this.hideValidationError();
     this.debounceValidation(apiKey);
+  }
+
+  private handleTestConnection(): void {
+    const apiKey = this.apiKeyInput.value.trim();
+    if (!apiKey) {
+      this.showValidationError('Please enter an API key first.');
+      return;
+    }
+    
+    // Clear debounce timer and validate immediately
+    if (this.validationTimer) {
+      clearTimeout(this.validationTimer);
+    }
+    
+    this.validateApiKey(apiKey);
   }
 
   private debounceValidation(apiKey: string): void {
@@ -162,17 +193,25 @@ class PopupUI {
     };
 
     try {
+      console.log('[BoongAI Popup] Validating API key for provider:', provider);
       const response = await chrome.runtime.sendMessage(message) as ValidationResultMessage;
       this.updateConnectionIndicator(response.isValid);
 
       if (response.isValid) {
         this.hideValidationError();
+        console.log('[BoongAI Popup] API key valid, encrypting and saving...');
         const encryptedKey = await ConfigurationManager.encryptApiKey(apiKey);
         await this.saveConfiguration({ apiKey: encryptedKey, lastValidated: Date.now() });
+        console.log('[BoongAI Popup] API key saved successfully');
+        
+        // Show success message briefly
+        this.showSuccessMessage('API key saved successfully!');
       } else {
+        console.error('[BoongAI Popup] API key validation failed:', response.error);
         this.showValidationError(response.error || 'API key validation failed.');
       }
     } catch (error) {
+      console.error('[BoongAI Popup] Validation error:', error);
       this.updateConnectionIndicator(false);
       this.showValidationError('Could not validate API key. Please try again.');
     }
@@ -195,6 +234,8 @@ class PopupUI {
     if (this.validationError) {
       this.validationError.textContent = message;
       this.validationError.classList.remove('hidden');
+      this.validationError.classList.remove('text-green-600', 'dark:text-green-400');
+      this.validationError.classList.add('text-red-600', 'dark:text-red-400');
     }
   }
 
@@ -205,18 +246,40 @@ class PopupUI {
     }
   }
 
+  private showSuccessMessage(message: string): void {
+    if (this.validationError) {
+      this.validationError.textContent = message;
+      this.validationError.classList.remove('hidden');
+      this.validationError.classList.remove('text-red-600', 'dark:text-red-400');
+      this.validationError.classList.add('text-green-600', 'dark:text-green-400');
+      
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        this.hideValidationError();
+      }, 3000);
+    }
+  }
+
   updateModelList(provider: AIProvider): void {
+    console.log('[BoongAI Popup] Updating model list for provider:', provider);
     this.modelSelect.innerHTML = '';
     const models = SUPPORTED_MODELS[provider];
+    console.log('[BoongAI Popup] Available models:', models);
+    
     models.forEach(model => {
       const option = document.createElement('option');
       option.value = model;
       option.textContent = this.formatModelName(model);
       this.modelSelect.appendChild(option);
     });
+    
     if (models.length > 0) {
       this.modelSelect.value = models[0];
+      console.log('[BoongAI Popup] Selected first model:', models[0]);
     }
+    
+    // Trigger floating label update
+    this.updateFloatingLabels();
   }
 
   private formatModelName(model: string): string {
@@ -254,15 +317,16 @@ class PopupUI {
     }
   }
 
-  private showApiGuideModal(): void {
+  private showApiGuide(): void {
     const provider = this.providerSelect.value as AIProvider;
     this.updateGuideContent(provider);
+    this.providerNameInlineSpan.textContent = this.getProviderDisplayName(provider);
     this.providerNameSpan.textContent = this.getProviderDisplayName(provider);
-    this.apiGuideModal.classList.remove('hidden');
+    this.guideSection.classList.add('expanded');
   }
 
-  private hideApiGuideModal(): void {
-    this.apiGuideModal.classList.add('hidden');
+  private hideApiGuide(): void {
+    this.guideSection.classList.remove('expanded');
   }
 
   private openProviderSite(): void {
@@ -273,7 +337,6 @@ class PopupUI {
       claude: 'https://console.anthropic.com/settings/keys'
     };
     chrome.tabs.create({ url: guideUrls[provider] });
-    this.hideApiGuideModal();
   }
 
   private getProviderDisplayName(provider: AIProvider): string {
@@ -510,6 +573,7 @@ class PopupUI {
 
 // Initialize popup UI when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('[BoongAI Popup] DOM loaded, initializing popup...');
   const popup = new PopupUI();
   popup.initialize();
 });

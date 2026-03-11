@@ -13,16 +13,26 @@
       body {
         margin: 0;
         width: 320px;
-        height: 500px;
-        min-height: unset !important;
+        min-height: 450px;
+        max-height: 600px;
         overflow: hidden;
+      }
+      
+      .guide-section {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+      }
+      
+      .guide-section.expanded {
+        max-height: 400px;
+        overflow-y: auto;
       }
     </style>
 </head>
 <body class="font-body bg-gray-100 dark:bg-black text-on-surface dark:text-dark-on-surface flex items-center justify-center m-0 p-0">
-    <!-- Main Settings View -->
-    <div id="settings-view" class="w-[320px] h-[500px] bg-surface dark:bg-dark-surface rounded-none shadow-none overflow-hidden flex flex-col relative transition-colors duration-300">
-        <div class="px-4 pt-4 pb-2 flex items-center justify-between shrink-0">
+    <div class="w-[320px] bg-surface dark:bg-dark-surface rounded-none shadow-none flex flex-col relative transition-colors duration-300">
+        <div class="px-6 pt-6 pb-2 flex items-center justify-between shrink-0">
             <h1 class="text-2xl font-normal text-on-surface dark:text-dark-on-surface tracking-normal font-display">BoongAI</h1>
             <label class="m3-switch relative inline-flex items-center cursor-pointer">
                 <input checked="" class="sr-only peer" type="checkbox" id="active-toggle"/>
@@ -34,8 +44,8 @@
                 </div>
             </label>
         </div>
-        <div class="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-4">
-            <p class="text-sm text-on-surface-variant dark:text-gray-400 leading-snug">
+        <div class="overflow-y-auto px-6 py-2 flex flex-col gap-5">
+            <p class="text-sm text-on-surface-variant dark:text-gray-400 mb-1 leading-snug">
                 Configure your AI assistant settings below.
             </p>
             <div class="flex flex-col gap-4 pt-1">
@@ -77,35 +87,40 @@
                         </button>
                     </div>
                 </div>
-                <p id="validation-error" class="text-xs text-red-600 dark:text-red-400 mt-1 hidden" role="alert"></p>
+                <div class="flex items-center gap-2">
+                    <p id="validation-error" class="text-xs flex-1 mt-1 hidden" role="alert"></p>
+                    <button id="test-connection" class="text-xs px-3 py-1.5 bg-primary dark:bg-dark-primary text-on-primary dark:text-dark-on-primary rounded hover:bg-primary-variant dark:hover:bg-dark-primary-variant transition-colors font-medium whitespace-nowrap" type="button">
+                        Test Connection
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Inline Guide Section -->
+            <div class="guide-section" id="guide-section">
+                <div class="border-t border-outline dark:border-gray-600 pt-4 mt-2">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-medium text-on-surface dark:text-dark-on-surface">How to get <span id="provider-name-inline">OpenAI</span> API Key</h3>
+                        <button id="close-guide" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-gray-400">close</span>
+                        </button>
+                    </div>
+                    <div id="guide-content" class="text-xs space-y-3">
+                        <!-- Content will be dynamically populated -->
+                    </div>
+                    <button id="open-provider-site" class="w-full mt-4 px-4 py-2 bg-primary dark:bg-dark-primary text-on-primary dark:text-dark-on-primary rounded-md hover:bg-primary-variant dark:hover:bg-dark-primary-variant transition-colors font-medium text-sm">
+                        Open <span id="provider-name">OpenAI</span> Site
+                    </button>
+                </div>
             </div>
         </div>
-        <div class="p-4 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-2">
+        <div class="p-6 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-3 border-t border-outline dark:border-gray-600">
             <div class="text-center">
                 <p class="text-xs leading-relaxed text-on-surface-variant dark:text-gray-400 mb-2">
                     Type <span class="text-primary dark:text-dark-primary font-bold">@BoongAI</span> [your request] in Facebook comments to activate the assistant.
                 </p>
-                <a href="#" id="api-guide-link" class="text-xs text-primary dark:text-dark-primary hover:underline">
+                <button id="api-guide-link" class="text-xs text-primary dark:text-dark-primary hover:underline cursor-pointer bg-transparent border-0">
                     How to get an API key?
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- API Key Guide View -->
-    <div id="guide-view" class="w-[320px] h-[500px] bg-surface dark:bg-dark-surface rounded-none shadow-none overflow-hidden flex-col relative transition-colors duration-300 hidden">
-        <!-- Guide Header -->
-        <div class="px-4 py-3 border-b border-outline dark:border-gray-600 flex items-center gap-3 shrink-0">
-            <button id="back-button" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <span class="material-symbols-outlined text-on-surface dark:text-dark-on-surface">arrow_back</span>
-            </button>
-            <h2 class="text-lg font-medium text-on-surface dark:text-dark-on-surface">Get API Key</h2>
-        </div>
-        
-        <!-- Guide Content -->
-        <div class="flex-1 overflow-y-auto px-4 py-3">
-            <div id="guide-content">
-                <!-- Content will be dynamically populated -->
+                </button>
             </div>
         </div>
         
@@ -117,6 +132,6 @@
         </div>
     </div>
 
-    <script src="dist/popup.js"></script>
+    <script src="popup.js"></script>
 </body>
 </html>

@@ -7,10 +7,19 @@ export class ContextScraper {
   /**
    * Extract complete post content from Facebook DOM
    */
-  static async extractPostContent(postId: string): Promise<PostContent> {
+  static async extractPostContent(postId: string, commentElement?: HTMLElement): Promise<PostContent> {
     try {
-      // Find the post container
-      const postElement = this.findPostContainer(postId);
+      // Find the post container - prefer using commentElement if provided
+      let postElement: HTMLElement | null = null;
+      
+      if (commentElement) {
+        postElement = this.findPostContainerFromComment(commentElement);
+      }
+      
+      if (!postElement) {
+        postElement = this.findPostContainer(postId);
+      }
+      
       if (!postElement) {
         throw new Error(`Post container not found for postId: ${postId}`);
       }
@@ -39,6 +48,36 @@ export class ContextScraper {
         isComplete: false
       };
     }
+  }
+
+  /**
+   * Find post container by traversing up from comment element
+   * This is more reliable than searching by postId
+   */
+  static findPostContainerFromComment(commentElement: HTMLElement): HTMLElement | null {
+    let current: HTMLElement | null = commentElement;
+    let depth = 0;
+    const maxDepth = 15; // Traverse up to 15 levels
+    
+    while (current && current !== document.body && depth < maxDepth) {
+      // Check if this is a post container
+      if (current.getAttribute('role') === 'article') {
+        return current;
+      }
+      
+      // Check for common post container classes/attributes
+      const classList = current.className || '';
+      if (classList.includes('userContentWrapper') || 
+          classList.includes('fbUserContent') ||
+          current.hasAttribute('data-pagelet') && current.getAttribute('data-pagelet')?.includes('FeedUnit')) {
+        return current;
+      }
+      
+      current = current.parentElement;
+      depth++;
+    }
+    
+    return null;
   }
 
   /**
