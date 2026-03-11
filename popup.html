@@ -13,15 +13,16 @@
       body {
         margin: 0;
         width: 320px;
-        height: 450px;
+        height: 500px;
         min-height: unset !important;
         overflow: hidden;
       }
     </style>
 </head>
 <body class="font-body bg-gray-100 dark:bg-black text-on-surface dark:text-dark-on-surface flex items-center justify-center m-0 p-0">
-    <div class="w-[320px] h-[400px] bg-surface dark:bg-dark-surface rounded-none shadow-none overflow-hidden flex flex-col relative transition-colors duration-300">
-        <div class="px-6 pt-6 pb-2 flex items-center justify-between shrink-0">
+    <!-- Main Settings View -->
+    <div id="settings-view" class="w-[320px] h-[500px] bg-surface dark:bg-dark-surface rounded-none shadow-none overflow-hidden flex flex-col relative transition-colors duration-300">
+        <div class="px-4 pt-4 pb-2 flex items-center justify-between shrink-0">
             <h1 class="text-2xl font-normal text-on-surface dark:text-dark-on-surface tracking-normal font-display">BoongAI</h1>
             <label class="m3-switch relative inline-flex items-center cursor-pointer">
                 <input checked="" class="sr-only peer" type="checkbox" id="active-toggle"/>
@@ -33,11 +34,11 @@
                 </div>
             </label>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 py-2 flex flex-col gap-5">
-            <p class="text-sm text-on-surface-variant dark:text-gray-400 mb-1 leading-snug">
+        <div class="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-4">
+            <p class="text-sm text-on-surface-variant dark:text-gray-400 leading-snug">
                 Configure your AI assistant settings below.
             </p>
-            <div class="flex flex-col gap-5 pt-2">
+            <div class="flex flex-col gap-4 pt-1">
                 <div class="relative group">
                     <select class="peer has-value w-full h-[56px] bg-transparent border border-outline dark:border-gray-500 rounded-[4px] px-4 pt-1 text-on-surface dark:text-dark-on-surface focus:border-primary dark:focus:border-dark-primary focus:border-2 focus:outline-none appearance-none cursor-pointer text-base" id="provider">
                         <option value="openai">OpenAI</option>
@@ -79,7 +80,7 @@
                 <p id="validation-error" class="text-xs text-red-600 dark:text-red-400 mt-1 hidden" role="alert"></p>
             </div>
         </div>
-        <div class="p-6 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-3">
+        <div class="p-4 pt-2 bg-surface dark:bg-dark-surface flex flex-col gap-2">
             <div class="text-center">
                 <p class="text-xs leading-relaxed text-on-surface-variant dark:text-gray-400 mb-2">
                     Type <span class="text-primary dark:text-dark-primary font-bold">@BoongAI</span> [your request] in Facebook comments to activate the assistant.
@@ -91,30 +92,28 @@
         </div>
     </div>
 
-    <!-- API Key Guide Modal -->
-    <div id="api-guide-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-        <div class="bg-surface dark:bg-dark-surface rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-outline dark:border-gray-600 flex items-center justify-between">
-                <h2 class="text-lg font-medium text-on-surface dark:text-dark-on-surface">Get API Key</h2>
-                <button id="close-modal" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <span class="material-symbols-outlined text-on-surface-variant dark:text-gray-400">close</span>
-                </button>
+    <!-- API Key Guide View -->
+    <div id="guide-view" class="w-[320px] h-[500px] bg-surface dark:bg-dark-surface rounded-none shadow-none overflow-hidden flex-col relative transition-colors duration-300 hidden">
+        <!-- Guide Header -->
+        <div class="px-4 py-3 border-b border-outline dark:border-gray-600 flex items-center gap-3 shrink-0">
+            <button id="back-button" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <span class="material-symbols-outlined text-on-surface dark:text-dark-on-surface">arrow_back</span>
+            </button>
+            <h2 class="text-lg font-medium text-on-surface dark:text-dark-on-surface">Get API Key</h2>
+        </div>
+        
+        <!-- Guide Content -->
+        <div class="flex-1 overflow-y-auto px-4 py-3">
+            <div id="guide-content">
+                <!-- Content will be dynamically populated -->
             </div>
-            
-            <!-- Modal Content -->
-            <div class="flex-1 overflow-y-auto p-6">
-                <div id="guide-content">
-                    <!-- Content will be dynamically populated -->
-                </div>
-            </div>
-            
-            <!-- Modal Footer -->
-            <div class="px-6 py-4 border-t border-outline dark:border-gray-600 flex justify-end gap-3">
-                <button id="open-provider-site" class="px-4 py-2 bg-primary dark:bg-dark-primary text-on-primary dark:text-dark-on-primary rounded-md hover:bg-primary-variant dark:hover:bg-dark-primary-variant transition-colors font-medium">
-                    Open <span id="provider-name">Provider</span> Site
-                </button>
-            </div>
+        </div>
+        
+        <!-- Guide Footer -->
+        <div class="px-4 py-3 border-t border-outline dark:border-gray-600 shrink-0">
+            <button id="open-provider-site" class="w-full px-4 py-2 bg-primary dark:bg-dark-primary text-on-primary dark:text-dark-on-primary rounded-md hover:bg-primary-variant dark:hover:bg-dark-primary-variant transition-colors font-medium text-sm">
+                Open <span id="provider-name">Provider</span> Site
+            </button>
         </div>
     </div>
 

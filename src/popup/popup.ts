@@ -12,8 +12,9 @@ class PopupUI {
   private connectionIndicator!: HTMLElement;
   private validationError!: HTMLElement;
   private apiGuideLink!: HTMLAnchorElement;
-  private apiGuideModal!: HTMLElement;
-  private closeModalBtn!: HTMLButtonElement;
+  private settingsView!: HTMLElement;
+  private guideView!: HTMLElement;
+  private backButton!: HTMLButtonElement;
   private openProviderSiteBtn!: HTMLButtonElement;
   private guideContent!: HTMLElement;
   private providerNameSpan!: HTMLElement;
